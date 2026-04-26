@@ -1,0 +1,25 @@
+{
+  "name": "默认实验结构",
+  "description": "包含 data/code/presentation/report/figures/docs 的标准实验目录结构",
+  "structure": {
+    "data": {
+      "raw": null,
+      "processed": null
+    },
+    "code": {
+      "analysis.py": "# 数据处理+画图\n",
+      "utils.py": "# 公用函数 utilities\n"
+    },
+    "presentation": {
+      "beamer": null,
+      "slides": null
+    },
+    "report": {
+      "draft.tex": "% LaTeX 实验报告草稿\n",
+      "figures": null
+    },
+    "figures": null,
+    "docs": null,
+    "README.md": "# {experiment_name}\n\n## 实验基本信息\n"
+  }
+}

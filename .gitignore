@@ -1,0 +1,15 @@
+note.md
+*.log
+*.tmp
+.DS_Store
+._*
+*.code-workspace
+.vscode/
+.idea/
+*.TMP
+
+
+# python
+__pycache__/
+# 用户数据（学号等个人信息，不提交）
+user_data/

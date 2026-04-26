@@ -1,0 +1,25 @@
+# Jupyter Notebook 项目 .gitignore
+
+# Notebook 输出
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+
+# 数据文件（大文件不提交）
+*.csv
+*.xlsx
+*.h5
+*.npy
+*.npz
+
+# 图片输出
+*.png
+*.jpg
+*.svg
+!**/figures/*.pdf
+
+# Labexp
+*.pdf
+docs/
+
+# 豁免产出文件
+!*{{ student_id }}*.pdf

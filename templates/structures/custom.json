@@ -1,0 +1,5 @@
+{
+  "name": "用户自定义",
+  "description": "从 user_data/custom_templates/ 加载的自定义结构",
+  "structure": {}
+}
