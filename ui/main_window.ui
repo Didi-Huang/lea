@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1032</width>
-    <height>831</height>
+    <width>1015</width>
+    <height>850</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -27,7 +27,7 @@
        <enum>QTabWidget::TabShape::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>5</number>
       </property>
       <property name="elideMode">
        <enum>Qt::TextElideMode::ElideNone</enum>
@@ -52,7 +52,7 @@
          <string>Experiment Name</string>
         </property>
        </widget>
-       <widget class="QLineEdit" name="lineEdit">
+       <widget class="QLineEdit" name="edit_experiment_name">
         <property name="geometry">
          <rect>
           <x>180</x>
@@ -62,7 +62,7 @@
          </rect>
         </property>
        </widget>
-       <widget class="QLabel" name="label_2">
+       <widget class="QLabel" name="label_parent_folder">
         <property name="geometry">
          <rect>
           <x>36</x>
@@ -75,7 +75,7 @@
          <string>Parent Folder</string>
         </property>
        </widget>
-       <widget class="QLineEdit" name="lineEdit_2">
+       <widget class="QLineEdit" name="edit_parent_folder">
         <property name="geometry">
          <rect>
           <x>180</x>
@@ -85,7 +85,7 @@
          </rect>
         </property>
        </widget>
-       <widget class="QPushButton" name="pushButton">
+       <widget class="QPushButton" name="btn_browse_folder">
         <property name="geometry">
          <rect>
           <x>320</x>
@@ -98,7 +98,7 @@
          <string>Browse</string>
         </property>
        </widget>
-       <widget class="QGroupBox" name="groupBox">
+       <widget class="QGroupBox" name="group_log">
         <property name="geometry">
          <rect>
           <x>60</x>
@@ -108,9 +108,9 @@
          </rect>
         </property>
         <property name="title">
-         <string>output log</string>
+         <string>Log</string>
         </property>
-        <widget class="QTextBrowser" name="textBrowser">
+        <widget class="QTextBrowser" name="text_log">
          <property name="geometry">
           <rect>
            <x>20</x>
@@ -121,7 +121,7 @@
          </property>
         </widget>
        </widget>
-       <widget class="QCheckBox" name="checkBox">
+       <widget class="QCheckBox" name="check_init_repo">
         <property name="geometry">
          <rect>
           <x>60</x>
@@ -134,7 +134,7 @@
          <string>Initialize Repository</string>
         </property>
        </widget>
-       <widget class="QCheckBox" name="checkBox_2">
+       <widget class="QCheckBox" name="check_generate_gitignore">
         <property name="geometry">
          <rect>
           <x>50</x>
@@ -144,7 +144,7 @@
          </rect>
         </property>
         <property name="text">
-         <string>Generate gitignore</string>
+         <string>Generate .gitignore</string>
         </property>
        </widget>
       </widget>
@@ -260,8 +260,8 @@
         <widget class="QPushButton" name="pushButton_5">
          <property name="geometry">
           <rect>
-           <x>370</x>
-           <y>300</y>
+           <x>330</x>
+           <y>40</y>
            <width>83</width>
            <height>22</height>
           </rect>
@@ -273,8 +273,8 @@
         <widget class="QPushButton" name="pushButton_6">
          <property name="geometry">
           <rect>
-           <x>550</x>
-           <y>300</y>
+           <x>480</x>
+           <y>80</y>
            <width>161</width>
            <height>22</height>
           </rect>
@@ -283,19 +283,45 @@
           <string>Delete Auxiliary</string>
          </property>
         </widget>
+        <widget class="QPushButton" name="btn_auto_clear_latex">
+         <property name="geometry">
+          <rect>
+           <x>260</x>
+           <y>260</y>
+           <width>111</width>
+           <height>41</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Auto Clear</string>
+         </property>
+        </widget>
        </widget>
        <widget class="QGroupBox" name="groupBox_3">
         <property name="geometry">
          <rect>
-          <x>110</x>
-          <y>410</y>
-          <width>611</width>
-          <height>261</height>
+          <x>10</x>
+          <y>350</y>
+          <width>931</width>
+          <height>361</height>
          </rect>
         </property>
         <property name="title">
          <string>Python</string>
         </property>
+        <widget class="QPushButton" name="btn_auto_clear_python">
+         <property name="geometry">
+          <rect>
+           <x>250</x>
+           <y>250</y>
+           <width>111</width>
+           <height>41</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Auto Clear</string>
+         </property>
+        </widget>
        </widget>
       </widget>
       <widget class="QWidget" name="tab_settings">
@@ -412,7 +438,7 @@
          </rect>
         </property>
         <property name="text">
-         <string>Dispalt Font</string>
+         <string>Dispaly Font</string>
         </property>
        </widget>
        <widget class="QFontComboBox" name="fontComboBox">
