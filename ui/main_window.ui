@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1015</width>
-    <height>850</height>
+    <width>557</width>
+    <height>524</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -27,7 +27,7 @@
        <enum>QTabWidget::TabShape::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>5</number>
+       <number>3</number>
       </property>
       <property name="elideMode">
        <enum>Qt::TextElideMode::ElideNone</enum>
@@ -85,7 +85,7 @@
          </rect>
         </property>
        </widget>
-       <widget class="QPushButton" name="btn_browse_folder">
+       <widget class="QPushButton" name="parent_folder_path_btn">
         <property name="geometry">
          <rect>
           <x>320</x>
@@ -162,19 +162,164 @@
        <attribute name="title">
         <string>Convertor</string>
        </attribute>
-       <widget class="QGroupBox" name="groupBox_4">
-        <property name="geometry">
-         <rect>
-          <x>200</x>
-          <y>90</y>
-          <width>481</width>
-          <height>261</height>
-         </rect>
-        </property>
-        <property name="title">
-         <string>GroupBox</string>
-        </property>
-       </widget>
+       <layout class="QVBoxLayout" name="verticalLayout_5">
+        <item>
+         <widget class="QGroupBox" name="box_convert_beamer_to_ppt">
+          <property name="title">
+           <string>Beamer to Power Point</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_4">
+           <item>
+            <widget class="QGroupBox" name="box_btp_io">
+             <property name="title">
+              <string>Input / Output</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_2">
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="1,6">
+                <item alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
+                 <widget class="QLabel" name="label_btp_io_source">
+                  <property name="text">
+                   <string>Source File:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="horizontalLayout">
+                  <item>
+                   <widget class="QLineEdit" name="edit_btp_io_source"/>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="btn_btp_io_source">
+                    <property name="text">
+                     <string>Browse</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="1,6">
+                <item alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
+                 <widget class="QLabel" name="label_btp_io_output_folder">
+                  <property name="text">
+                   <string>Output Folder:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="horizontalLayout_2">
+                  <item>
+                   <widget class="QLineEdit" name="edit_btp_io_output_folder"/>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="btn_btp_io_output_folder">
+                    <property name="text">
+                     <string>Browse</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="1,6">
+                <item alignment="Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignVCenter">
+                 <widget class="QLabel" name="label_btp_io_output_format">
+                  <property name="text">
+                   <string>Output Format:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item alignment="Qt::AlignmentFlag::AlignLeft">
+                 <widget class="QComboBox" name="combo_btp_io_output_format">
+                  <property name="maximumSize">
+                   <size>
+                    <width>100</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <item>
+                   <property name="text">
+                    <string>PDF to PPTX</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>PDF to PPT</string>
+                   </property>
+                  </item>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_7" stretch="1,6">
+                <item alignment="Qt::AlignmentFlag::AlignRight">
+                 <widget class="QLabel" name="label_btp_custom_name">
+                  <property name="text">
+                   <string>Custom Filename:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,2,4">
+                  <item>
+                   <widget class="QCheckBox" name="cb_btp_custom_name">
+                    <property name="text">
+                     <string/>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLineEdit" name="edit_btp_custom_name"/>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="lbl_btp_custom_ext">
+                    <property name="text">
+                     <string>.pptx</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <widget class="QPushButton" name="btn_btp_convert">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>45</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Convert</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="box_btp_log">
+             <property name="title">
+              <string>Log</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_3">
+              <item>
+               <widget class="QTextBrowser" name="tb_btp_log"/>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
       </widget>
       <widget class="QWidget" name="tab_cache_cleaner">
        <attribute name="title">
@@ -185,8 +330,8 @@
          <rect>
           <x>10</x>
           <y>10</y>
-          <width>971</width>
-          <height>341</height>
+          <width>661</width>
+          <height>301</height>
          </rect>
         </property>
         <property name="title">
@@ -302,8 +447,8 @@
          <rect>
           <x>10</x>
           <y>350</y>
-          <width>931</width>
-          <height>361</height>
+          <width>671</width>
+          <height>301</height>
          </rect>
         </property>
         <property name="title">
@@ -351,7 +496,7 @@
          </rect>
         </property>
        </widget>
-       <widget class="QPushButton" name="pushButton_2">
+       <widget class="QPushButton" name="config_path_btn">
         <property name="geometry">
          <rect>
           <x>270</x>
@@ -361,7 +506,7 @@
          </rect>
         </property>
         <property name="text">
-         <string>PushButton</string>
+         <string>Browse</string>
         </property>
        </widget>
        <widget class="QPushButton" name="pushButton_3">
@@ -459,5 +604,38 @@
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>cb_btp_custom_name</sender>
+   <signal>clicked(bool)</signal>
+   <receiver>edit_btp_custom_name</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>207</x>
+     <y>210</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>250</x>
+     <y>208</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>cb_btp_custom_name</sender>
+   <signal>clicked(bool)</signal>
+   <receiver>lbl_btp_custom_ext</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>216</x>
+     <y>212</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>557</x>
+     <y>212</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>
