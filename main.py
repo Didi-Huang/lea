@@ -1,6 +1,6 @@
 """
 Labexp-Assistant
-实验代码助手 —— PyQt6 GUI 版本
+实验代码助手 —— PySide6 版本
 """
 
 import sys
@@ -9,14 +9,15 @@ import re
 from pathlib import Path
 from datetime import datetime
 
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QPushButton, QTextEdit, QGroupBox,
     QFormLayout, QMessageBox, QFileDialog, QTabWidget, QCheckBox,
     QComboBox, QStatusBar,
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QFont, QFontDatabase
+from PySide6.QtCore import Qt, QThread, Signal
+
+from PySide6.QtGui import QFont, QFontDatabase
 
 # =========================
 # 路径配置
@@ -132,8 +133,8 @@ def load_fonts() -> str | None:
 # =========================
 
 class CreateStructureThread(QThread):
-    log_signal = pyqtSignal(str)
-    finished_signal = pyqtSignal(bool, str)
+    log_signal = Signal(str)
+    finished_signal = Signal(bool, str)
 
     def __init__(self, exp_name: str, base_dir: str, overwrite: bool, structure: dict):
         super().__init__()
@@ -173,7 +174,7 @@ class CreateStructureThread(QThread):
 
 
 class GitignoreThread(QThread):
-    finished_signal = pyqtSignal(bool, str)
+    finished_signal = Signal(bool, str)
 
     def __init__(self, target_dir: str, student_id: str, overwrite: bool, template_name: str):
         super().__init__()
@@ -201,7 +202,7 @@ class GitignoreThread(QThread):
 
 
 class ReadmeThread(QThread):
-    finished_signal = pyqtSignal(bool, str)
+    finished_signal = Signal(bool, str)
 
     def __init__(self, exp_name: str, target_dir: str, template_name: str, student_id: str = ""):
         super().__init__()
