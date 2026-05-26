@@ -10,6 +10,10 @@ Project init → Data analysis → Visualization → Format conversion → Clean
 
 </div>
 
+> [!NOTE]
+> The `user_data/` directory is gitignored and not tracked by Git.
+> Create it manually if needed and place your user data files there.
+
 ## Features
 
 ### Project — One-click scaffolding
