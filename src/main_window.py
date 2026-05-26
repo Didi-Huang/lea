@@ -177,10 +177,26 @@ class LabExpAssistant(QMainWindow):
         self.resize(max(size.width(), 750), max(size.height(), 580))
         self.setWindowTitle(tr("app.title"))
 
-        # 标签页按钮平分水平空间
+        # 标签页按钮平分水平空间（动态计算 + resize 事件）
+        self._update_tab_widths()
+
+    def resizeEvent(self, event) -> None:
+        """窗口大小变化时重新计算标签页宽度。"""
+        super().resizeEvent(event)
+        self._update_tab_widths()
+
+    def _update_tab_widths(self) -> None:
+        """让 N 个标签页按钮均分 QTabWidget 水平宽度。"""
         tab_widget = self.findChild(QTabWidget, "tabWidget")
-        if tab_widget:
-            tab_widget.tabBar().setExpanding(True)
+        if not tab_widget or tab_widget.count() == 0:
+            return
+        n = tab_widget.count()
+        tab_bar = tab_widget.tabBar()
+        available = tab_widget.viewportSizeHint().width()
+        if available <= 0:
+            available = tab_widget.width() - 4
+        per_tab = max(80, (available - (n + 1) * 2) // n)
+        tab_bar.setStyleSheet(f"QTabBar::tab {{ min-width: {per_tab}px; max-width: {per_tab + 4}px; }}")
 
     # ── Convertor 页控件 ────────────────────────────────
 
