@@ -1,6 +1,7 @@
 """LabExp-Assistant — 实验室助手 GUI 主入口。
 
 基于 PySide6，UI 从 Qt Designer .ui 文件加载。
+支持中/英/日三语实时切换。
 """
 import json
 import sys
@@ -39,26 +40,36 @@ LOCALES_DIR: Path = Path(__file__).resolve().parent / "locales"
 DPI_MIN: int = 100
 DPI_MAX: int = 400
 DPI_DEFAULT: int = 250
+TAB_ORDER: list[str] = [
+    "tab.project", "tab.data", "tab.snippets",
+    "tab.convertor", "tab.cache_cleaner", "tab.settings",
+]
 
 
-# ── 翻译支持（暂未启用） ─────────────────────────────
-_translations: dict = {}
+# ── 翻译支持 ─────────────────────────────────────────
+_translations: dict[str, dict[str, str]] = {}
 _current_lang: str = "en"
 
 
 def load_translations() -> None:
     """加载所有语言包。"""
+    _translations.clear()
     for lang in ("en", "zh_CN", "ja"):
         path = LOCALES_DIR / f"{lang}.json"
         if path.exists():
-            _translations.setdefault(lang, {}).update(
-                json.loads(path.read_text("utf-8"))
-            )
+            _translations[lang] = json.loads(path.read_text("utf-8"))
 
 
 def tr(key: str) -> str:
-    """国际化翻译（占位）。"""
+    """国际化翻译。"""
     return _translations.get(_current_lang, {}).get(key, key)
+
+
+def set_language(lang: str) -> None:
+    """切换全局语言。"""
+    global _current_lang
+    if lang in ("en", "zh_CN", "ja"):
+        _current_lang = lang
 
 
 # ── 主窗口 ────────────────────────────────────────────
@@ -69,12 +80,14 @@ class LabExpAssistant(QMainWindow):
         super().__init__()
         self._load_ui()
         self._init_convertor_controls()
-        self._init_btp_extra_controls()   # DPI + 进度条
-        self._init_pdf_editor_controls()  # PDF 页面编辑器
+        self._init_pdf_editor_controls()  # PDF 页面编辑器（来自 UI 文件）
         self._init_data_controls()       # Data 标签页控件
         self._init_settings_controls()   # Settings 标签页控件
+        self._init_cache_cleaner_controls()  # Cache Cleaner 标签页控件
         self._connect_signals()
         self._load_settings()            # 从 user_data/config.json 加载设置
+        self._apply_language(_current_lang)  # 应用初始语言
+        self._connect_language_signals()     # 连接语言切换信号
 
     # ── UI 加载 ────────────────────────────────────────
 
@@ -95,7 +108,7 @@ class LabExpAssistant(QMainWindow):
         size = ui_widget.size()
         ui_widget.deleteLater()
         self.resize(size)
-        self.setWindowTitle("Lab Exp Assistant")
+        self.setWindowTitle(tr("app.title"))
 
         # 默认选中 Convertor 标签页
         tab_widget = self.findChild(QTabWidget, "tabWidget")
@@ -125,112 +138,47 @@ class LabExpAssistant(QMainWindow):
         self.edit_btp_custom_name.setEnabled(False)
         self.lbl_btp_custom_ext.setEnabled(False)
 
+        # 存储 UI 文件中的原始控件，用于翻译
+        self._widget_box_convert_beamer = self.findChild(QGroupBox, "box_convert_beamer_to_ppt")
+        self._widget_btp_io_box = self.findChild(QGroupBox, "box_btp_io")
+        self._widget_btp_log_box = self.findChild(QGroupBox, "box_btp_log")
+        self._widget_label_btp_source = self.findChild(QLabel, "label_btp_io_source")
+        self._widget_label_btp_output = self.findChild(QLabel, "label_btp_io_output_folder")
+        self._widget_label_btp_format = self.findChild(QLabel, "label_btp_io_output_format")
+        self._widget_label_btp_custom = self.findChild(QLabel, "label_btp_custom_name")
+
+        # DPI 和进度条（UI 文件定义）
+        self.spin_btp_dpi = self.findChild(QSpinBox, "spin_btp_dpi")
+        self.progress_btp = self.findChild(QProgressBar, "progress_btp")
+        self._lbl_btp_dpi = self.findChild(QLabel, "label_btp_dpi")
+
     def _init_btp_extra_controls(self) -> None:
-        """在已有布局中程序化添加 DPI 调节和进度条。
-
-        将 DPI 行插入到 box_btp_io 布局中（自定义名与转换按钮之间），
-        将进度条插入到 box_btp_log 布局中（日志框上方）。
-        """
-        # ── DPI SpinBox ─────────────────────────────
-        io_box = self.findChild(QGroupBox, "box_btp_io")
-        if io_box is None:
-            return
-        io_layout = io_box.layout()  # verticalLayout_2
-        if io_layout is None:
-            return
-
-        dpi_layout = QHBoxLayout()
-        dpi_label = QLabel("DPI:")
-        dpi_label.setMinimumWidth(60)
-        dpi_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        self.spin_btp_dpi = QSpinBox()
-        self.spin_btp_dpi.setRange(DPI_MIN, DPI_MAX)
-        self.spin_btp_dpi.setValue(DPI_DEFAULT)
-        self.spin_btp_dpi.setSuffix(" DPI")
-        dpi_layout.addWidget(dpi_label)
-        dpi_layout.addWidget(self.spin_btp_dpi, 1)
-        dpi_layout.addStretch(6)
-
-        # 插入到 convert 按钮之前（最后一项前）
-        convert_idx = io_layout.count() - 1
-        io_layout.insertLayout(convert_idx, dpi_layout)
-
-        # ── Progress Bar ────────────────────────────
-        log_box = self.findChild(QGroupBox, "box_btp_log")
-        if log_box is None:
-            return
-        log_layout = log_box.layout()  # verticalLayout_3
-        if log_layout is None:
-            return
-
-        self.progress_btp = QProgressBar()
-        self.progress_btp.setVisible(False)
-        log_layout.insertWidget(0, self.progress_btp)
+        """（已废弃：DPI 和进度条现在由 UI 文件定义。）"""
+        pass
 
     # ── PDF 页面编辑器控件 ─────────────────────────────
 
     def _init_pdf_editor_controls(self) -> None:
-        """在 Convertor 标签页底部添加 PDF 页面编辑器区域。"""
-        tab_convertor = self.findChild(QWidget, "tab_convertor")
-        if tab_convertor is None:
-            return
-        tab_layout = tab_convertor.layout()  # verticalLayout_5
-        if tab_layout is None:
-            return
+        """初始化 PDF 页面编辑器控件引用（由 UI 文件定义）。"""
+        self.group_pdf_edit = self.findChild(QGroupBox, "group_pdf_edit")
+        self.btn_pdf_edit_source = self.findChild(QPushButton, "btn_pdf_edit_source")
+        self.lbl_pdf_edit_info = self.findChild(QLabel, "lbl_pdf_edit_info")
+        self.btn_pdf_edit_info = self.findChild(QPushButton, "btn_pdf_edit_info")
+        self.radio_pdf_delete = self.findChild(QRadioButton, "radio_pdf_delete")
+        self.radio_pdf_extract = self.findChild(QRadioButton, "radio_pdf_extract")
+        self.lbl_pdf_edit_range = self.findChild(QLabel, "lbl_pdf_edit_range")
+        self.edit_pdf_edit_range = self.findChild(QLineEdit, "edit_pdf_edit_range")
+        self.btn_pdf_edit_output = self.findChild(QPushButton, "btn_pdf_edit_output")
+        self.edit_pdf_edit_output = self.findChild(QLineEdit, "edit_pdf_edit_output")
+        self.btn_pdf_edit_execute = self.findChild(QPushButton, "btn_pdf_edit_execute")
+        self.tb_pdf_edit_log = self.findChild(QTextBrowser, "tb_pdf_edit_log")
 
-        # ── 主 GroupBox ─────────────────────────────
-        self.group_pdf_edit = QGroupBox("PDF 页面编辑器")
-        pdf_layout = QVBoxLayout(self.group_pdf_edit)
-
-        # 第 1 行：源文件
-        row1 = QHBoxLayout()
-        self.btn_pdf_edit_source = QPushButton("选择 PDF...")
-        self.lbl_pdf_edit_info = QLabel("未选择文件")
-        self.btn_pdf_edit_info = QPushButton("获取信息")
-        self.btn_pdf_edit_info.setEnabled(False)
-        row1.addWidget(self.btn_pdf_edit_source)
-        row1.addWidget(self.lbl_pdf_edit_info, 1)
-        row1.addWidget(self.btn_pdf_edit_info)
-        pdf_layout.addLayout(row1)
-
-        # 第 2 行：操作模式 + 页面范围
-        row2 = QHBoxLayout()
-        self.radio_pdf_delete = QRadioButton("删除页面")
-        self.radio_pdf_delete.setChecked(True)
-        self.radio_pdf_extract = QRadioButton("提取页面")
-        self.lbl_pdf_edit_range = QLabel("页面范围:")
-        self.edit_pdf_edit_range = QLineEdit()
-        self.edit_pdf_edit_range.setPlaceholderText("例: 1,3,5-8,10-")
-        row2.addWidget(self.radio_pdf_delete)
-        row2.addWidget(self.radio_pdf_extract)
-        row2.addWidget(self.lbl_pdf_edit_range)
-        row2.addWidget(self.edit_pdf_edit_range, 1)
-        pdf_layout.addLayout(row2)
-
-        # 第 3 行：输出路径
-        row3 = QHBoxLayout()
-        self.btn_pdf_edit_output = QPushButton("输出路径...")
-        self.edit_pdf_edit_output = QLineEdit()
-        self.edit_pdf_edit_output.setPlaceholderText("输出文件路径（自动填入）")
-        row3.addWidget(self.btn_pdf_edit_output)
-        row3.addWidget(self.edit_pdf_edit_output, 1)
-        pdf_layout.addLayout(row3)
-
-        # 第 4 行：执行按钮
-        row4 = QHBoxLayout()
-        self.btn_pdf_edit_execute = QPushButton("执行")
-        self.btn_pdf_edit_execute.setEnabled(False)
-        row4.addStretch()
-        row4.addWidget(self.btn_pdf_edit_execute)
-        pdf_layout.addLayout(row4)
-
-        # 日志
-        self.tb_pdf_edit_log = QTextBrowser()
-        self.tb_pdf_edit_log.setMaximumHeight(120)
-        pdf_layout.addWidget(self.tb_pdf_edit_log)
-
-        # 插入到标签页底部
-        tab_layout.addWidget(self.group_pdf_edit)
+        if self.btn_pdf_edit_info:
+            self.btn_pdf_edit_info.setEnabled(False)
+        if self.btn_pdf_edit_execute:
+            self.btn_pdf_edit_execute.setEnabled(False)
+        if self.radio_pdf_delete:
+            self.radio_pdf_delete.setChecked(True)
 
         # 保存内部状态
         self._pdf_source_path: str = ""
@@ -267,6 +215,17 @@ class LabExpAssistant(QMainWindow):
         self.btn_data_hist.setEnabled(False)
         self.btn_data_linear.setEnabled(False)
 
+        # 存储 UI 文件中的控件引用，用于翻译
+        self._group_data_source = self.findChild(QGroupBox, "group_data_source")
+        self._label_data_source = self.findChild(QLabel, "label_data_source")
+        self._label_data_encoding = self.findChild(QLabel, "label_data_encoding")
+        self._label_data_separator = self.findChild(QLabel, "label_data_separator")
+        self._label_data_header = self.findChild(QLabel, "label_data_header")
+        self._group_data_preview = self.findChild(QGroupBox, "group_data_preview")
+        self._group_data_analysis = self.findChild(QGroupBox, "group_data_analysis")
+        self._label_data_xcol = self.findChild(QLabel, "label_data_xcol")
+        self._label_data_ycol = self.findChild(QLabel, "label_data_ycol")
+
     # ── Settings 页控件 ────────────────────────────────
 
     def _init_settings_controls(self) -> None:
@@ -293,6 +252,158 @@ class LabExpAssistant(QMainWindow):
         self.btn_settings_save = self.findChild(QPushButton, "btn_settings_save")
         self.btn_settings_cancel = self.findChild(QPushButton, "btn_settings_cancel")
 
+        # 存储 UI 文件中的控件引用，用于翻译
+        self._group_settings_lang = self.findChild(QGroupBox, "group_settings_lang")
+        self._group_settings_personal = self.findChild(QGroupBox, "group_settings_personal")
+        self._label_settings_name = self.findChild(QLabel, "label_settings_name")
+        self._label_settings_student_id = self.findChild(QLabel, "label_settings_student_id")
+        self._group_settings_appearance = self.findChild(QGroupBox, "group_settings_appearance")
+        self._label_settings_font = self.findChild(QLabel, "label_settings_font")
+        self._label_settings_font_size = self.findChild(QLabel, "label_settings_font_size")
+        self._group_settings_defaults = self.findChild(QGroupBox, "group_settings_defaults")
+        self._label_settings_default_dpi = self.findChild(QLabel, "label_settings_default_dpi")
+        self._label_settings_default_format = self.findChild(QLabel, "label_settings_default_format")
+
+    # ── 语言切换 ─────────────────────────────────────
+
+    def _init_cache_cleaner_controls(self) -> None:
+        """初始化 Cache Cleaner 标签页的控件引用。"""
+        # LaTeX 区域
+        self.group_cache_latex = self.findChild(QGroupBox, "group_cache_latex")
+        self.label_cache_latex_output = self.findChild(QLabel, "label_cache_latex_output")
+        self.edit_cache_latex_output = self.findChild(QLineEdit, "edit_cache_latex_output")
+        self.btn_cache_latex_clear_output = self.findChild(QPushButton, "btn_cache_latex_clear_output")
+        self.label_cache_latex_aux = self.findChild(QLabel, "label_cache_latex_aux")
+        self.edit_cache_latex_aux = self.findChild(QLineEdit, "edit_cache_latex_aux")
+        self.check_cache_latex_files_only = self.findChild(QCheckBox, "check_cache_latex_files_only")
+        self.btn_cache_latex_delete_aux = self.findChild(QPushButton, "btn_cache_latex_delete_aux")
+        self.btn_auto_clear_latex = self.findChild(QPushButton, "btn_auto_clear_latex")
+        # Python 区域
+        self.group_cache_python = self.findChild(QGroupBox, "group_cache_python")
+        self.check_cache_python_pycache = self.findChild(QCheckBox, "check_cache_python_pycache")
+        self.check_cache_python_pyc = self.findChild(QCheckBox, "check_cache_python_pyc")
+        self.btn_auto_clear_python = self.findChild(QPushButton, "btn_auto_clear_python")
+
+    # ── 语言切换 ─────────────────────────────────────
+
+    def _connect_language_signals(self) -> None:
+        """连接语言切换单选按钮的信号（在初始语言应用之后）。"""
+        self.radio_settings_lang_zh.toggled.connect(self._on_language_changed)
+        self.radio_settings_lang_ja.toggled.connect(self._on_language_changed)
+        self.radio_settings_lang_en.toggled.connect(self._on_language_changed)
+
+    def _on_language_changed(self, checked: bool) -> None:
+        """语言单选按钮切换时重新应用界面语言。"""
+        if not checked:
+            return
+        lang = self._get_selected_language()
+        set_language(lang)
+        self._apply_language(lang)
+
+    def _apply_language(self, lang: str) -> None:
+        """将界面所有文本切换为指定语言。
+
+        覆盖 UI 文件中的静态控件、程序化创建的控件以及标签页标题。
+        """
+        # ── 窗口标题 ──────────────────────────────────
+        self.setWindowTitle(tr("app.title"))
+
+        # ── 标签页标题 ────────────────────────────────
+        tab_widget = self.findChild(QTabWidget, "tabWidget")
+        if tab_widget:
+            for i, key in enumerate(TAB_ORDER):
+                if i < tab_widget.count():
+                    tab_widget.setTabText(i, tr(key))
+
+        # ── Project 标签页 ─────────────────────────────
+        _set_if(self.findChild(QLabel, "label_experiment_name"), "setText", tr("project.exp_name"))
+        _set_if(self.findChild(QLabel, "label_parent_folder"), "setText", tr("project.parent_folder"))
+        _set_if(self.findChild(QPushButton, "parent_folder_path_btn"), "setText", tr("project.browse"))
+        _set_if(self.findChild(QCheckBox, "check_generate_gitignore"), "setText", tr("project.gen_gitignore"))
+        _set_if(self.findChild(QCheckBox, "check_init_repo"), "setText", tr("project.init_repo"))
+        _set_if(self.findChild(QGroupBox, "group_log"), "setTitle", tr("project.log"))
+
+        # ── Convertor 标签页（UI 文件控件） ─────────────
+        _set_if(self._widget_box_convert_beamer, "setTitle", tr("convertor.beamer_to_ppt"))
+        _set_if(self._widget_btp_io_box, "setTitle", tr("convertor.source_pdf").rstrip(":"))
+        _set_if(self._widget_btp_log_box, "setTitle", tr("convertor.log"))
+        _set_if(self._widget_label_btp_source, "setText", tr("convertor.source_pdf"))
+        _set_if(self._widget_label_btp_output, "setText", tr("convertor.output_folder"))
+        _set_if(self._widget_label_btp_format, "setText", tr("convertor.output_format"))
+        _set_if(self._widget_label_btp_custom, "setText", tr("convertor.custom_filename"))
+        _set_if(self.btn_btp_convert, "setText", tr("convertor.convert"))
+        _set_if(self.btn_btp_io_source, "setText", tr("struct.browse"))
+        _set_if(self.btn_btp_io_output_folder, "setText", tr("struct.browse"))
+
+        # Convertor 程序化控件
+        _set_if(self._lbl_btp_dpi, "setText", tr("convertor.dpi_label"))
+
+        # ── PDF 编辑器 ────────────────────────────────
+        _set_if(self.group_pdf_edit, "setTitle", tr("pdf_editor.title"))
+        _set_if(self.btn_pdf_edit_source, "setText", tr("pdf_editor.select_pdf"))
+        _set_if(self.lbl_pdf_edit_info, "setText", tr("pdf_editor.no_file"))
+        _set_if(self.btn_pdf_edit_info, "setText", tr("pdf_editor.get_info"))
+        _set_if(self.radio_pdf_delete, "setText", tr("pdf_editor.delete_pages"))
+        _set_if(self.radio_pdf_extract, "setText", tr("pdf_editor.extract_pages"))
+        _set_if(self.lbl_pdf_edit_range, "setText", tr("pdf_editor.page_range"))
+        _set_if(self.edit_pdf_edit_range, "setPlaceholderText", tr("pdf_editor.page_range_placeholder"))
+        _set_if(self.btn_pdf_edit_output, "setText", tr("pdf_editor.output_path"))
+        _set_if(self.edit_pdf_edit_output, "setPlaceholderText", tr("pdf_editor.output_placeholder"))
+        _set_if(self.btn_pdf_edit_execute, "setText", tr("pdf_editor.execute"))
+
+        # ── Data 标签页 ───────────────────────────────
+        _set_if(self._group_data_source, "setTitle", tr("data.source"))
+        _set_if(self._label_data_source, "setText", tr("data.file"))
+        _set_if(self.btn_data_source, "setText", tr("data.browse"))
+        _set_if(self._label_data_encoding, "setText", tr("data.encoding"))
+        _set_if(self._label_data_separator, "setText", tr("data.separator"))
+        _set_if(self._label_data_header, "setText", tr("data.header_row"))
+        _set_if(self.btn_data_load, "setText", tr("data.load"))
+        _set_if(self._group_data_preview, "setTitle", tr("data.preview"))
+        _set_if(self.lbl_data_stats, "setText", tr("data.not_loaded"))
+        _set_if(self._group_data_analysis, "setTitle", tr("data.analysis"))
+        _set_if(self._label_data_xcol, "setText", tr("data.x_axis"))
+        _set_if(self._label_data_ycol, "setText", tr("data.y_axis"))
+        _set_if(self.btn_data_scatter, "setText", tr("data.scatter"))
+        _set_if(self.btn_data_hist, "setText", tr("data.hist"))
+        _set_if(self.btn_data_linear, "setText", tr("data.linear"))
+        _set_if(self.lbl_data_fit_result, "setText", tr("data.fit_placeholder"))
+        _set_if(self.btn_data_save_png, "setText", tr("data.save_png"))
+        _set_if(self.btn_data_copy_latex, "setText", tr("data.copy_latex"))
+
+        # ── Settings 标签页 ───────────────────────────
+        _set_if(self._group_settings_lang, "setTitle", tr("settings.language"))
+        _set_if(self.radio_settings_lang_zh, "setText", tr("settings.lang_zh"))
+        _set_if(self.radio_settings_lang_en, "setText", tr("settings.lang_en"))
+        _set_if(self.radio_settings_lang_ja, "setText", tr("settings.lang_ja"))
+        _set_if(self._group_settings_personal, "setTitle", tr("settings.personal_info"))
+        _set_if(self._label_settings_name, "setText", tr("settings.name"))
+        _set_if(self.edit_settings_name, "setPlaceholderText", tr("settings.name_placeholder"))
+        _set_if(self._label_settings_student_id, "setText", tr("settings.student_id"))
+        _set_if(self.edit_settings_student_id, "setPlaceholderText", tr("settings.student_id_placeholder"))
+        _set_if(self._group_settings_appearance, "setTitle", tr("settings.appearance"))
+        _set_if(self._label_settings_font, "setText", tr("settings.font"))
+        _set_if(self._label_settings_font_size, "setText", tr("settings.font_size"))
+        _set_if(self._group_settings_defaults, "setTitle", tr("settings.defaults"))
+        _set_if(self._label_settings_default_dpi, "setText", tr("settings.default_dpi"))
+        _set_if(self._label_settings_default_format, "setText", tr("settings.default_format"))
+        _set_if(self.btn_settings_reset, "setText", tr("settings.reset"))
+        _set_if(self.btn_settings_save, "setText", tr("settings.save"))
+        _set_if(self.btn_settings_cancel, "setText", tr("settings.cancel"))
+
+        # ── Cache Cleaner 标签页 ───────────────────────
+        _set_if(self.group_cache_latex, "setTitle", tr("cache_cleaner.latex"))
+        _set_if(self.label_cache_latex_output, "setText", tr("cache_cleaner.output_location"))
+        _set_if(self.btn_cache_latex_clear_output, "setText", tr("cache_cleaner.clear"))
+        _set_if(self.label_cache_latex_aux, "setText", tr("cache_cleaner.aux_path"))
+        _set_if(self.check_cache_latex_files_only, "setText", tr("cache_cleaner.files_only"))
+        _set_if(self.btn_cache_latex_delete_aux, "setText", tr("cache_cleaner.delete_aux"))
+        _set_if(self.btn_auto_clear_latex, "setText", tr("cache_cleaner.auto_clear"))
+        _set_if(self.group_cache_python, "setTitle", tr("cache_cleaner.python"))
+        _set_if(self.check_cache_python_pycache, "setText", tr("cache_cleaner.clear_pycache"))
+        _set_if(self.check_cache_python_pyc, "setText", tr("cache_cleaner.clear_pyc"))
+        _set_if(self.btn_auto_clear_python, "setText", tr("cache_cleaner.auto_clear"))
+
     # ── 设置加载 / 保存 ─────────────────────────────────
 
     @property
@@ -309,6 +420,7 @@ class LabExpAssistant(QMainWindow):
 
             # 语言
             lang = config.get("language", "zh_CN")
+            set_language(lang)
             if lang == "ja":
                 self.radio_settings_lang_ja.setChecked(True)
             elif lang == "en":
@@ -351,10 +463,8 @@ class LabExpAssistant(QMainWindow):
         if not user_data_dir.exists():
             reply = QMessageBox.question(
                 self,
-                "目录不存在",
-                "user_data/ 目录不存在。\n\n"
-                "该目录用于存放个人设置和用户数据（不会被 Git 追踪）。\n"
-                "是否创建？",
+                tr("settings.dir_not_found_title"),
+                tr("settings.dir_not_found_msg"),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             )
             if reply == QMessageBox.StandardButton.Yes:
@@ -374,6 +484,9 @@ class LabExpAssistant(QMainWindow):
         self._config_path.write_text(
             json.dumps(config, indent=2, ensure_ascii=False), "utf-8"
         )
+        # 同时保存语言到全局并重新应用
+        set_language(self._get_selected_language())
+        self._apply_language(_current_lang)
 
     def _get_selected_language(self) -> str:
         """返回当前选中的语言标识。"""
@@ -419,14 +532,16 @@ class LabExpAssistant(QMainWindow):
     def _browse_source(self) -> None:
         """浏览选择源 PDF 文件。"""
         path, _ = QFileDialog.getOpenFileName(
-            self, "选择 PDF 文件", "", "PDF Files (*.pdf)"
+            self, tr("dialog.select_pdf"), "", "PDF Files (*.pdf)"
         )
         if path:
             self.edit_btp_io_source.setText(path)
 
     def _browse_output_folder(self) -> None:
         """浏览选择输出文件夹。"""
-        path = QFileDialog.getExistingDirectory(self, "选择输出文件夹")
+        path = QFileDialog.getExistingDirectory(
+            self, tr("dialog.select_output_folder")
+        )
         if path:
             self.edit_btp_io_output_folder.setText(path)
 
@@ -439,12 +554,12 @@ class LabExpAssistant(QMainWindow):
         """执行 Beamer PDF → PPTX 转换。"""
         source = self.edit_btp_io_source.text().strip()
         if not source:
-            QMessageBox.warning(self, "Warning", "请选择源文件")
+            QMessageBox.warning(self, tr("dialog.warning"), tr("convertor.no_source"))
             return
 
         output_folder = self.edit_btp_io_output_folder.text().strip()
         if not output_folder:
-            QMessageBox.warning(self, "Warning", "请选择输出文件夹")
+            QMessageBox.warning(self, tr("dialog.warning"), tr("convertor.no_output"))
             return
 
         fmt = self.combo_btp_io_output_format.currentText()
@@ -454,8 +569,8 @@ class LabExpAssistant(QMainWindow):
         dpi = self.spin_btp_dpi.value()
 
         self.tb_btp_log.clear()
-        self.tb_btp_log.append(f"开始转换: {source}")
-        self.tb_btp_log.append(f"DPI: {dpi}, 格式: {fmt}")
+        self.tb_btp_log.append(f"{tr('convertor.starting')}{source}")
+        self.tb_btp_log.append(f"DPI: {dpi}, {tr('convertor.output_format')[:-1]}: {fmt}")
 
         # 准备进度条
         self.progress_btp.setVisible(True)
@@ -482,22 +597,24 @@ class LabExpAssistant(QMainWindow):
         self.progress_btp.setVisible(False)
 
         if result["success"]:
-            self.tb_btp_log.append("转换完成！")
-            self.tb_btp_log.append(f"输出文件: {result['output_path']}")
+            self.tb_btp_log.append(tr("convertor.done"))
+            self.tb_btp_log.append(f"{tr('convertor.output_file')}{result['output_path']}")
         else:
-            self.tb_btp_log.append(f"转换失败: {result['error']}")
-            QMessageBox.critical(self, "错误", result["error"])
+            self.tb_btp_log.append(f"{tr('convertor.failed')}{result['error']}")
+            QMessageBox.critical(self, tr("dialog.error"), result["error"])
 
     # ── PDF 编辑器槽函数 ──────────────────────────────
 
     def _pdf_browse_source(self) -> None:
         """选择要编辑的 PDF 源文件。"""
         path, _ = QFileDialog.getOpenFileName(
-            self, "选择 PDF 文件", "", "PDF Files (*.pdf)"
+            self, tr("dialog.select_pdf"), "", "PDF Files (*.pdf)"
         )
         if path:
             self._pdf_source_path = path
-            self.lbl_pdf_edit_info.setText(f"已选择: {Path(path).name}")
+            self.lbl_pdf_edit_info.setText(
+                f"{tr('pdf_editor.selected')}{Path(path).name}"
+            )
             self.btn_pdf_edit_info.setEnabled(True)
             self.btn_pdf_edit_execute.setEnabled(True)
             # 自动猜输出路径
@@ -514,19 +631,20 @@ class LabExpAssistant(QMainWindow):
             size_str = ""
             if info.width_points and info.height_points:
                 size_str = f" ({info.width_points:.0f}x{info.height_points:.0f} pt)"
+            page_word = tr("pdf_editor.pages_info")
             self.lbl_pdf_edit_info.setText(
-                f"{Path(self._pdf_source_path).name} — {info.total_pages} 页{size_str}"
+                f"{Path(self._pdf_source_path).name} — {info.total_pages}{page_word}{size_str}"
             )
             self.tb_pdf_edit_log.append(
-                f"PDF 信息: {info.total_pages} 页{size_str}"
+                f"PDF info: {info.total_pages}{page_word}{size_str}"
             )
         except Exception as exc:
-            self.tb_pdf_edit_log.append(f"获取信息失败: {exc}")
+            self.tb_pdf_edit_log.append(f"{tr('pdf_editor.cannot_read')}{exc}")
 
     def _pdf_browse_output(self) -> None:
         """浏览选择 PDF 输出路径。"""
         path, _ = QFileDialog.getSaveFileName(
-            self, "保存 PDF", "", "PDF Files (*.pdf)"
+            self, tr("dialog.save_pdf"), "", "PDF Files (*.pdf)"
         )
         if path:
             self.edit_pdf_edit_output.setText(path)
@@ -541,17 +659,23 @@ class LabExpAssistant(QMainWindow):
     def _pdf_execute(self) -> None:
         """执行 PDF 页面删除或提取。"""
         if not self._pdf_source_path:
-            QMessageBox.warning(self, "Warning", "请先选择 PDF 文件")
+            QMessageBox.warning(
+                self, tr("dialog.warning"), tr("pdf_editor.no_file_selected")
+            )
             return
 
         range_text = self.edit_pdf_edit_range.text().strip()
         if not range_text:
-            QMessageBox.warning(self, "Warning", "请输入页面范围")
+            QMessageBox.warning(
+                self, tr("dialog.warning"), tr("pdf_editor.no_range")
+            )
             return
 
         output_path = self.edit_pdf_edit_output.text().strip()
         if not output_path:
-            QMessageBox.warning(self, "Warning", "请指定输出路径")
+            QMessageBox.warning(
+                self, tr("dialog.warning"), tr("pdf_editor.no_output")
+            )
             return
 
         # 获取总页数用于校验
@@ -559,31 +683,33 @@ class LabExpAssistant(QMainWindow):
             info = PdfPageEditor.get_info(self._pdf_source_path)
             total_pages = info.total_pages
         except Exception as exc:
-            QMessageBox.critical(self, "错误", f"无法读取 PDF 信息: {exc}")
+            QMessageBox.critical(self, tr("dialog.error"),
+                                 f"{tr('pdf_editor.cannot_read')}{exc}")
             return
 
         # 解析页面范围
         try:
             pages = PdfPageEditor.parse_page_spec(range_text, total_pages)
         except ValueError as exc:
-            QMessageBox.warning(self, "提示", str(exc))
+            QMessageBox.warning(self, tr("dialog.info"), str(exc))
             return
 
         self.tb_pdf_edit_log.clear()
         self.tb_pdf_edit_log.append(
-            f"总页数: {total_pages}, 目标页面: {len(pages)} 页"
+            f"{tr('pdf_editor.total_pages')}{total_pages}"
+            f"{tr('pdf_editor.target_pages')}{len(pages)}{tr('pdf_editor.pages_info')}"
         )
 
         is_delete = self.radio_pdf_delete.isChecked()
         if is_delete:
-            self.tb_pdf_edit_log.append(f"操作: 删除页面 {range_text}")
+            self.tb_pdf_edit_log.append(f"{tr('pdf_editor.op_delete')}{range_text}")
             result = PdfPageEditor.delete_pages(
                 source=self._pdf_source_path,
                 pages_to_delete=pages,
                 output_path=output_path,
             )
         else:
-            self.tb_pdf_edit_log.append(f"操作: 提取页面 {range_text}")
+            self.tb_pdf_edit_log.append(f"{tr('pdf_editor.op_extract')}{range_text}")
             result = PdfPageEditor.extract_pages(
                 source=self._pdf_source_path,
                 pages_to_extract=pages,
@@ -591,20 +717,20 @@ class LabExpAssistant(QMainWindow):
             )
 
         if result.success:
+            page_word = tr("pdf_editor.pages_info")
             self.tb_pdf_edit_log.append(
-                f"完成! 输出: {result.output_path} ({result.page_count} 页)"
+                f"{tr('pdf_editor.done')}{result.output_path} ({result.page_count}{page_word})"
             )
         else:
-            self.tb_pdf_edit_log.append(f"失败: {result.error}")
-            QMessageBox.critical(self, "错误", result.error)
-
+            self.tb_pdf_edit_log.append(f"{tr('pdf_editor.failed')}{result.error}")
+            QMessageBox.critical(self, tr("dialog.error"), result.error)
 
     # ── Data 标签页槽函数 ──────────────────────────────
 
     def _data_browse_source(self) -> None:
         """浏览选择 CSV 数据文件。"""
         path, _ = QFileDialog.getOpenFileName(
-            self, "选择 CSV 文件", "",
+            self, tr("dialog.select_csv"), "",
             "CSV Files (*.csv);;TSV Files (*.tsv);;All Files (*)",
         )
         if path:
@@ -614,42 +740,50 @@ class LabExpAssistant(QMainWindow):
         """加载 CSV 数据并显示预览。"""
         source = self.edit_data_source.text().strip()
         if not source:
-            QMessageBox.warning(self, "提示", "请先选择数据文件")
+            QMessageBox.warning(self, tr("dialog.info"), tr("data.no_file"))
             return
-        # TODO: 实现 CSV 加载和 QTableView 预览
         QMessageBox.information(
-            self, "待实现",
-            "CSV 数据加载功能将在下一步实现。\n"
-            f"已选择文件: {source}"
+            self, tr("dialog.not_implemented"),
+            f"{tr('data.csv_load_placeholder')}{source}"
         )
 
     def _data_scatter(self) -> None:
         """绘制散点图。"""
-        QMessageBox.information(self, "待实现", "散点图功能将在下一步实现。")
+        QMessageBox.information(
+            self, tr("dialog.not_implemented"), tr("data.scatter_placeholder")
+        )
 
     def _data_hist(self) -> None:
         """绘制直方图。"""
-        QMessageBox.information(self, "待实现", "直方图功能将在下一步实现。")
+        QMessageBox.information(
+            self, tr("dialog.not_implemented"), tr("data.hist_placeholder")
+        )
 
     def _data_linear(self) -> None:
         """执行线性拟合。"""
-        QMessageBox.information(self, "待实现", "线性拟合功能将在下一步实现。")
+        QMessageBox.information(
+            self, tr("dialog.not_implemented"), tr("data.linear_placeholder")
+        )
 
     def _data_save_png(self) -> None:
         """保存当前图表为 PNG。"""
-        QMessageBox.information(self, "待实现", "图片保存功能将在下一步实现。")
+        QMessageBox.information(
+            self, tr("dialog.not_implemented"), tr("data.save_png_placeholder")
+        )
 
     def _data_copy_latex(self) -> None:
         """复制拟合结果为 LaTeX 公式。"""
-        QMessageBox.information(self, "待实现", "LaTeX 复制功能将在下一步实现。")
+        QMessageBox.information(
+            self, tr("dialog.not_implemented"), tr("data.copy_latex_placeholder")
+        )
 
     # ── Settings 标签页槽函数 ──────────────────────────
 
     def _settings_reset(self) -> None:
         """恢复设置默认值。"""
         reply = QMessageBox.question(
-            self, "恢复默认",
-            "确定要恢复所有设置为默认值吗？",
+            self, tr("settings.confirm_reset"),
+            tr("settings.confirm_reset_msg"),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
@@ -661,8 +795,17 @@ class LabExpAssistant(QMainWindow):
             self.combo_settings_default_format.setCurrentIndex(0)
 
     # ── 入口 ──────────────────────────────────────────────
+
+
+def _set_if(widget, method: str, value: str) -> None:
+    """安全调用 widget 的 setter 方法（widget 可能为 None）。"""
+    if widget is not None:
+        getattr(widget, method)(value)
+
+
 def main() -> None:
     """应用入口。"""
+    load_translations()
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     window = LabExpAssistant()
