@@ -177,6 +177,11 @@ class LabExpAssistant(QMainWindow):
         self.resize(max(size.width(), 750), max(size.height(), 580))
         self.setWindowTitle(tr("app.title"))
 
+        # 标签页按钮平分水平空间
+        tab_widget = self.findChild(QTabWidget, "tabWidget")
+        if tab_widget:
+            tab_widget.tabBar().setExpanding(True)
+
     # ── Convertor 页控件 ────────────────────────────────
 
     def _init_convertor_controls(self) -> None:
