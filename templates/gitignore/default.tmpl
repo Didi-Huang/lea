@@ -1,24 +1,27 @@
-# Labexp-Assistant 自动生成的 .gitignore
+# Labexp-Assistant 自动生成的 .gitignore 模板
+
+# 实验数据
+*.xlsx
 
 # 忽略数据库文件
 *.db
 *.sqlite
 *.sqlite3
 
-# 忽略临时文件
+# 忽略Latex和python临时文件
+.latextmp/
 *.tmp
-*.log
-*.bak
+
+# 忽略 Python 编译生成的文件
+__pycache__/
 
 # 忽略 macOS 系统文件
 .DS_Store
 ._*
 
-# 忽略 latex 编译生成的文件
-.latex_tmp
-
-# 忽略 Python 编译生成的文件
-__pycache__/
+# 忽略实验日志 
+# 最终成功实验日志务必手动添加
+logs/
 
 # 忽略有版权问题的文件（实验讲义、PDF 教材等）
 *.pdf
