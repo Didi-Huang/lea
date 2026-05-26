@@ -261,9 +261,54 @@ class LabExpAssistant(QMainWindow):
         self.edit_settings_name = self.findChild(QLineEdit, "edit_settings_name")
         self.edit_settings_student_id = self.findChild(QLineEdit, "edit_settings_student_id")
 
-        # 外观
-        self.combo_settings_font = self.findChild(QFontComboBox, "combo_settings_font")
+        # 外观 —— 用普通 QComboBox 替换 QFontComboBox 以避免独立弹窗问题
+        self._init_font_combo()
+
         self.spin_settings_font_size = self.findChild(QSpinBox, "spin_settings_font_size")
+
+    def _init_font_combo(self) -> None:
+        """用普通 QComboBox 替换 UI 文件中的 QFontComboBox。
+
+        原因：PySide6 的 QFontComboBox 在部分平台/主题下会弹出独立对话框
+        而非下拉列表，且不会自动关闭。
+        """
+        from PySide6.QtGui import QFontDatabase
+
+        old_combo = self.findChild(QFontComboBox, "combo_settings_font")
+        if old_combo is None:
+            return
+
+        # 找到旧 combo 在布局中的位置
+        parent_layout = None
+        index = -1
+        parent_widget = old_combo.parentWidget()
+        if parent_widget:
+            parent_layout = parent_widget.layout()
+        if parent_layout is None:
+            # 尝试从 form layout 中查找
+            for child in self.findChildren(QWidget):
+                lay = child.layout()
+                if lay:
+                    idx = lay.indexOf(old_combo)
+                    if idx >= 0:
+                        parent_layout = lay
+                        index = idx
+                        break
+
+        # 创建新 combo 并填入系统字体
+        new_combo = QComboBox()
+        new_combo.setObjectName("combo_settings_font")
+        font_db = QFontDatabase()
+        families = font_db.families()
+        new_combo.addItems(families)
+
+        # 替换
+        if parent_layout is not None and index >= 0:
+            parent_layout.replaceWidget(old_combo, new_combo)
+        old_combo.hide()
+        old_combo.deleteLater()
+
+        self.combo_settings_font = new_combo
 
         # 默认值
         self.spin_settings_default_dpi = self.findChild(QSpinBox, "spin_settings_default_dpi")
@@ -584,7 +629,7 @@ class LabExpAssistant(QMainWindow):
         self.btn_settings_cancel.clicked.connect(self._load_settings)
         self.btn_settings_reset.clicked.connect(self._settings_reset)
         # 外观实时应用
-        self.combo_settings_font.currentFontChanged.connect(self._on_appearance_changed)
+        self.combo_settings_font.currentTextChanged.connect(self._on_appearance_changed)
         self.spin_settings_font_size.valueChanged.connect(self._on_appearance_changed)
 
     # ── Convertor 槽函数 ──────────────────────────────
@@ -1162,9 +1207,7 @@ class LabExpAssistant(QMainWindow):
                 QMessageBox.critical(self, tr("dialog.error"), result.error or "Unknown error")
 
     def _on_appearance_changed(self, *args) -> None:
-        """字体或字号变化时关闭下拉框并应用外观。"""
-        if self.combo_settings_font:
-            self.combo_settings_font.hidePopup()
+        """字体或字号变化时实时应用外观。"""
         self._apply_appearance()
 
     def _apply_appearance(self) -> None:
