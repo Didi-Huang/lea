@@ -1,4 +1,3 @@
-<?xml version='1.0' encoding='utf-8'?>
 <ui version="4.0">
    <class>MainWindow</class>
    <widget class="QMainWindow" name="MainWindow">
@@ -73,6 +72,32 @@
                                     </item>
                                  </layout>
                               </item>
+                              <item row="2" column="0">
+                                 <widget class="QLabel" name="label_project_template">
+                                    <property name="text">
+                                       <string>Structure Template:</string>
+                                    </property>
+                                 </widget>
+                              </item>
+                              <item row="2" column="1">
+                                 <widget class="QComboBox" name="combo_project_template">
+                                    <item>
+                                       <property name="text">
+                                          <string>Default</string>
+                                       </property>
+                                    </item>
+                                    <item>
+                                       <property name="text">
+                                          <string>Scientific</string>
+                                       </property>
+                                    </item>
+                                    <item>
+                                       <property name="text">
+                                          <string>Custom</string>
+                                       </property>
+                                    </item>
+                                 </widget>
+                              </item>
                            </layout>
                         </item>
                         <item>
@@ -86,6 +111,19 @@
                            <widget class="QCheckBox" name="check_init_repo">
                               <property name="text">
                                  <string>Initialize Repository</string>
+                              </property>
+                           </widget>
+                        </item>
+                        <item>
+                           <widget class="QPushButton" name="btn_project_create">
+                              <property name="text">
+                                 <string>Create Experiment Structure</string>
+                              </property>
+                              <property name="minimumSize">
+                                 <size>
+                                    <width>0</width>
+                                    <height>45</height>
+                                 </size>
                               </property>
                            </widget>
                         </item>

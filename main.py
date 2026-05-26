@@ -3,11 +3,13 @@
 基于 PySide6，UI 从 Qt Designer .ui 文件加载。
 支持中/英/日三语实时切换。
 """
+
 import json
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QFile, QIODevice
+from PySide6.QtCore import QFile, QIODevice, Qt
+from PySide6.QtGui import QStandardItem, QStandardItemModel
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (
     QApplication,
@@ -19,14 +21,14 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMainWindow,
     QMessageBox,
     QProgressBar,
     QPushButton,
     QRadioButton,
-    QMainWindow,
     QSpinBox,
-    QTabWidget,
     QTableView,
+    QTabWidget,
     QTextBrowser,
     QVBoxLayout,
     QWidget,
@@ -34,6 +36,7 @@ from PySide6.QtWidgets import (
 
 from src.convertor import BtpConvertor
 from src.pdf_editor import PdfPageEditor
+from src.project_builder import ProjectBuilder
 
 # ── 常量 ──────────────────────────────────────────────
 LOCALES_DIR: Path = Path(__file__).resolve().parent / "locales"
@@ -41,8 +44,12 @@ DPI_MIN: int = 100
 DPI_MAX: int = 400
 DPI_DEFAULT: int = 250
 TAB_ORDER: list[str] = [
-    "tab.project", "tab.data", "tab.snippets",
-    "tab.convertor", "tab.cache_cleaner", "tab.settings",
+    "tab.project",
+    "tab.data",
+    "tab.snippets",
+    "tab.convertor",
+    "tab.cache_cleaner",
+    "tab.settings",
 ]
 
 
@@ -81,14 +88,29 @@ class LabExpAssistant(QMainWindow):
         self._load_ui()
         self._init_convertor_controls()
         self._init_pdf_editor_controls()  # PDF 页面编辑器（来自 UI 文件）
-        self._init_data_controls()       # Data 标签页控件
-        self._init_settings_controls()   # Settings 标签页控件
+        self._init_data_controls()  # Data 标签页控件
+        self._init_settings_controls()  # Settings 标签页控件
         self._init_cache_cleaner_controls()  # Cache Cleaner 标签页控件
+        self._init_project_controls()  # Project 标签页控件
         self._connect_signals()
-        self._load_settings()            # 从 user_data/config.json 加载设置
+        self._load_settings()  # 从 user_data/config.json 加载设置
         self._apply_language(_current_lang)  # 应用初始语言
-        self._connect_language_signals()     # 连接语言切换信号
+        self._connect_language_signals()  # 连接语言切换信号
 
+    # ── Project 页控件 ────────────────────────────────
+
+    def _init_project_controls(self) -> None:
+        """初始化 Project 标签页的控件引用。"""
+        self.edit_experiment_name = self.findChild(QLineEdit, "edit_experiment_name")
+        self.edit_parent_folder = self.findChild(QLineEdit, "edit_parent_folder")
+        self.parent_folder_path_btn = self.findChild(QPushButton, "parent_folder_path_btn")
+        self.combo_project_template = self.findChild(QComboBox, "combo_project_template")
+        self.check_generate_gitignore = self.findChild(QCheckBox, "check_generate_gitignore")
+        self.check_init_repo = self.findChild(QCheckBox, "check_init_repo")
+        self.btn_project_create = self.findChild(QPushButton, "btn_project_create")
+        self.text_log = self.findChild(QTextBrowser, "text_log")
+
+    # ── UI 加载 ────────────────────────────────────────
     # ── UI 加载 ────────────────────────────────────────
 
     def _load_ui(self) -> None:
@@ -245,7 +267,9 @@ class LabExpAssistant(QMainWindow):
 
         # 默认值
         self.spin_settings_default_dpi = self.findChild(QSpinBox, "spin_settings_default_dpi")
-        self.combo_settings_default_format = self.findChild(QComboBox, "combo_settings_default_format")
+        self.combo_settings_default_format = self.findChild(
+            QComboBox, "combo_settings_default_format"
+        )
 
         # 按钮
         self.btn_settings_reset = self.findChild(QPushButton, "btn_settings_reset")
@@ -262,7 +286,9 @@ class LabExpAssistant(QMainWindow):
         self._label_settings_font_size = self.findChild(QLabel, "label_settings_font_size")
         self._group_settings_defaults = self.findChild(QGroupBox, "group_settings_defaults")
         self._label_settings_default_dpi = self.findChild(QLabel, "label_settings_default_dpi")
-        self._label_settings_default_format = self.findChild(QLabel, "label_settings_default_format")
+        self._label_settings_default_format = self.findChild(
+            QLabel, "label_settings_default_format"
+        )
 
     # ── 语言切换 ─────────────────────────────────────
 
@@ -272,10 +298,14 @@ class LabExpAssistant(QMainWindow):
         self.group_cache_latex = self.findChild(QGroupBox, "group_cache_latex")
         self.label_cache_latex_output = self.findChild(QLabel, "label_cache_latex_output")
         self.edit_cache_latex_output = self.findChild(QLineEdit, "edit_cache_latex_output")
-        self.btn_cache_latex_clear_output = self.findChild(QPushButton, "btn_cache_latex_clear_output")
+        self.btn_cache_latex_clear_output = self.findChild(
+            QPushButton, "btn_cache_latex_clear_output"
+        )
         self.label_cache_latex_aux = self.findChild(QLabel, "label_cache_latex_aux")
         self.edit_cache_latex_aux = self.findChild(QLineEdit, "edit_cache_latex_aux")
-        self.check_cache_latex_files_only = self.findChild(QCheckBox, "check_cache_latex_files_only")
+        self.check_cache_latex_files_only = self.findChild(
+            QCheckBox, "check_cache_latex_files_only"
+        )
         self.btn_cache_latex_delete_aux = self.findChild(QPushButton, "btn_cache_latex_delete_aux")
         self.btn_auto_clear_latex = self.findChild(QPushButton, "btn_auto_clear_latex")
         # Python 区域
@@ -317,10 +347,24 @@ class LabExpAssistant(QMainWindow):
 
         # ── Project 标签页 ─────────────────────────────
         _set_if(self.findChild(QLabel, "label_experiment_name"), "setText", tr("project.exp_name"))
-        _set_if(self.findChild(QLabel, "label_parent_folder"), "setText", tr("project.parent_folder"))
-        _set_if(self.findChild(QPushButton, "parent_folder_path_btn"), "setText", tr("project.browse"))
-        _set_if(self.findChild(QCheckBox, "check_generate_gitignore"), "setText", tr("project.gen_gitignore"))
+        _set_if(
+            self.findChild(QLabel, "label_parent_folder"), "setText", tr("project.parent_folder")
+        )
+        _set_if(
+            self.findChild(QLabel, "label_project_template"),
+            "setText",
+            tr("project.template_label"),
+        )
+        _set_if(
+            self.findChild(QPushButton, "parent_folder_path_btn"), "setText", tr("project.browse")
+        )
+        _set_if(
+            self.findChild(QCheckBox, "check_generate_gitignore"),
+            "setText",
+            tr("project.gen_gitignore"),
+        )
         _set_if(self.findChild(QCheckBox, "check_init_repo"), "setText", tr("project.init_repo"))
+        _set_if(self.findChild(QPushButton, "btn_project_create"), "setText", tr("project.create"))
         _set_if(self.findChild(QGroupBox, "group_log"), "setTitle", tr("project.log"))
 
         # ── Convertor 标签页（UI 文件控件） ─────────────
@@ -346,9 +390,13 @@ class LabExpAssistant(QMainWindow):
         _set_if(self.radio_pdf_delete, "setText", tr("pdf_editor.delete_pages"))
         _set_if(self.radio_pdf_extract, "setText", tr("pdf_editor.extract_pages"))
         _set_if(self.lbl_pdf_edit_range, "setText", tr("pdf_editor.page_range"))
-        _set_if(self.edit_pdf_edit_range, "setPlaceholderText", tr("pdf_editor.page_range_placeholder"))
+        _set_if(
+            self.edit_pdf_edit_range, "setPlaceholderText", tr("pdf_editor.page_range_placeholder")
+        )
         _set_if(self.btn_pdf_edit_output, "setText", tr("pdf_editor.output_path"))
-        _set_if(self.edit_pdf_edit_output, "setPlaceholderText", tr("pdf_editor.output_placeholder"))
+        _set_if(
+            self.edit_pdf_edit_output, "setPlaceholderText", tr("pdf_editor.output_placeholder")
+        )
         _set_if(self.btn_pdf_edit_execute, "setText", tr("pdf_editor.execute"))
 
         # ── Data 标签页 ───────────────────────────────
@@ -380,7 +428,11 @@ class LabExpAssistant(QMainWindow):
         _set_if(self._label_settings_name, "setText", tr("settings.name"))
         _set_if(self.edit_settings_name, "setPlaceholderText", tr("settings.name_placeholder"))
         _set_if(self._label_settings_student_id, "setText", tr("settings.student_id"))
-        _set_if(self.edit_settings_student_id, "setPlaceholderText", tr("settings.student_id_placeholder"))
+        _set_if(
+            self.edit_settings_student_id,
+            "setPlaceholderText",
+            tr("settings.student_id_placeholder"),
+        )
         _set_if(self._group_settings_appearance, "setTitle", tr("settings.appearance"))
         _set_if(self._label_settings_font, "setText", tr("settings.font"))
         _set_if(self._label_settings_font_size, "setText", tr("settings.font_size"))
@@ -481,9 +533,7 @@ class LabExpAssistant(QMainWindow):
             "default_dpi": self.spin_settings_default_dpi.value(),
             "default_format": self.combo_settings_default_format.currentText(),
         }
-        self._config_path.write_text(
-            json.dumps(config, indent=2, ensure_ascii=False), "utf-8"
-        )
+        self._config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), "utf-8")
         # 同时保存语言到全局并重新应用
         set_language(self._get_selected_language())
         self._apply_language(_current_lang)
@@ -522,6 +572,10 @@ class LabExpAssistant(QMainWindow):
         self.btn_data_save_png.clicked.connect(self._data_save_png)
         self.btn_data_copy_latex.clicked.connect(self._data_copy_latex)
 
+        # Project 标签页
+        self.parent_folder_path_btn.clicked.connect(self._project_browse_folder)
+        self.btn_project_create.clicked.connect(self._project_create)
+
         # Settings 标签页
         self.btn_settings_save.clicked.connect(self._save_settings)
         self.btn_settings_cancel.clicked.connect(self._load_settings)
@@ -539,9 +593,7 @@ class LabExpAssistant(QMainWindow):
 
     def _browse_output_folder(self) -> None:
         """浏览选择输出文件夹。"""
-        path = QFileDialog.getExistingDirectory(
-            self, tr("dialog.select_output_folder")
-        )
+        path = QFileDialog.getExistingDirectory(self, tr("dialog.select_output_folder"))
         if path:
             self.edit_btp_io_output_folder.setText(path)
 
@@ -612,9 +664,7 @@ class LabExpAssistant(QMainWindow):
         )
         if path:
             self._pdf_source_path = path
-            self.lbl_pdf_edit_info.setText(
-                f"{tr('pdf_editor.selected')}{Path(path).name}"
-            )
+            self.lbl_pdf_edit_info.setText(f"{tr('pdf_editor.selected')}{Path(path).name}")
             self.btn_pdf_edit_info.setEnabled(True)
             self.btn_pdf_edit_execute.setEnabled(True)
             # 自动猜输出路径
@@ -635,47 +685,35 @@ class LabExpAssistant(QMainWindow):
             self.lbl_pdf_edit_info.setText(
                 f"{Path(self._pdf_source_path).name} — {info.total_pages}{page_word}{size_str}"
             )
-            self.tb_pdf_edit_log.append(
-                f"PDF info: {info.total_pages}{page_word}{size_str}"
-            )
+            self.tb_pdf_edit_log.append(f"PDF info: {info.total_pages}{page_word}{size_str}")
         except Exception as exc:
             self.tb_pdf_edit_log.append(f"{tr('pdf_editor.cannot_read')}{exc}")
 
     def _pdf_browse_output(self) -> None:
         """浏览选择 PDF 输出路径。"""
-        path, _ = QFileDialog.getSaveFileName(
-            self, tr("dialog.save_pdf"), "", "PDF Files (*.pdf)"
-        )
+        path, _ = QFileDialog.getSaveFileName(self, tr("dialog.save_pdf"), "", "PDF Files (*.pdf)")
         if path:
             self.edit_pdf_edit_output.setText(path)
 
     def _pdf_on_input_changed(self) -> None:
         """页面范围输入变化时启用/禁用执行按钮。"""
         has_range = bool(self.edit_pdf_edit_range.text().strip())
-        self.btn_pdf_edit_execute.setEnabled(
-            bool(self._pdf_source_path) and has_range
-        )
+        self.btn_pdf_edit_execute.setEnabled(bool(self._pdf_source_path) and has_range)
 
     def _pdf_execute(self) -> None:
         """执行 PDF 页面删除或提取。"""
         if not self._pdf_source_path:
-            QMessageBox.warning(
-                self, tr("dialog.warning"), tr("pdf_editor.no_file_selected")
-            )
+            QMessageBox.warning(self, tr("dialog.warning"), tr("pdf_editor.no_file_selected"))
             return
 
         range_text = self.edit_pdf_edit_range.text().strip()
         if not range_text:
-            QMessageBox.warning(
-                self, tr("dialog.warning"), tr("pdf_editor.no_range")
-            )
+            QMessageBox.warning(self, tr("dialog.warning"), tr("pdf_editor.no_range"))
             return
 
         output_path = self.edit_pdf_edit_output.text().strip()
         if not output_path:
-            QMessageBox.warning(
-                self, tr("dialog.warning"), tr("pdf_editor.no_output")
-            )
+            QMessageBox.warning(self, tr("dialog.warning"), tr("pdf_editor.no_output"))
             return
 
         # 获取总页数用于校验
@@ -683,8 +721,7 @@ class LabExpAssistant(QMainWindow):
             info = PdfPageEditor.get_info(self._pdf_source_path)
             total_pages = info.total_pages
         except Exception as exc:
-            QMessageBox.critical(self, tr("dialog.error"),
-                                 f"{tr('pdf_editor.cannot_read')}{exc}")
+            QMessageBox.critical(self, tr("dialog.error"), f"{tr('pdf_editor.cannot_read')}{exc}")
             return
 
         # 解析页面范围
@@ -727,10 +764,32 @@ class LabExpAssistant(QMainWindow):
 
     # ── Data 标签页槽函数 ──────────────────────────────
 
+    def _embed_plot(self, fig) -> None:
+        """将 matplotlib Figure 嵌入 widget_data_plot。"""
+        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+
+        # 清除旧内容
+        layout = self.widget_data_plot.layout()
+        if layout is None:
+            from PySide6.QtWidgets import QVBoxLayout
+
+            layout = QVBoxLayout(self.widget_data_plot)
+            layout.setContentsMargins(0, 0, 0, 0)
+        else:
+            while layout.count():
+                item = layout.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+        canvas = FigureCanvas(fig)
+        layout.addWidget(canvas)
+        canvas.draw()
+
     def _data_browse_source(self) -> None:
         """浏览选择 CSV 数据文件。"""
         path, _ = QFileDialog.getOpenFileName(
-            self, tr("dialog.select_csv"), "",
+            self,
+            tr("dialog.select_csv"),
+            "",
             "CSV Files (*.csv);;TSV Files (*.tsv);;All Files (*)",
         )
         if path:
@@ -742,47 +801,365 @@ class LabExpAssistant(QMainWindow):
         if not source:
             QMessageBox.warning(self, tr("dialog.info"), tr("data.no_file"))
             return
-        QMessageBox.information(
-            self, tr("dialog.not_implemented"),
-            f"{tr('data.csv_load_placeholder')}{source}"
+
+        from pathlib import Path
+
+        import pandas as pd
+
+        if not Path(source).exists():
+            QMessageBox.warning(self, tr("dialog.error"), tr("data.file_not_found"))
+            return
+
+        encoding = self.combo_data_encoding.currentText()
+        sep_text = self.combo_data_separator.currentText()
+        sep = "\t" if sep_text == "\\t" else sep_text
+        header_row = self.spin_data_header.value()
+
+        try:
+            df = pd.read_csv(
+                source, encoding=encoding, sep=sep, header=None if header_row == 0 else header_row
+            )
+        except Exception as exc:
+            QMessageBox.critical(self, tr("dialog.error"), f"{tr('data.load_failed')}{exc}")
+            return
+
+        self._data_df = df
+
+        # 填充 QTableView
+        model = QStandardItemModel(df.shape[0], df.shape[1])
+        if header_row == 0:
+            model.setHorizontalHeaderLabels([str(c) for c in df.columns])
+        else:
+            model.setHorizontalHeaderLabels([f"Col{i+1}" for i in range(df.shape[1])])
+        for row in range(df.shape[0]):
+            for col in range(df.shape[1]):
+                val = df.iat[row, col]
+                item = QStandardItem(str(val) if not pd.isna(val) else "")
+                model.setItem(row, col, item)
+        self._data_model = model
+        self.table_data_preview.setModel(model)
+
+        # 更新统计
+        self.lbl_data_stats.setText(
+            f"{df.shape[0]} {tr('data.rows')}, {df.shape[1]} {tr('data.columns')}"
         )
+
+        # 填充列选择下拉框
+        cols = [str(c) for c in df.columns]
+        self.combo_data_xcol.clear()
+        self.combo_data_ycol.clear()
+        self.combo_data_xcol.addItems(cols)
+        self.combo_data_ycol.addItems(cols)
+        if len(cols) >= 2:
+            self.combo_data_ycol.setCurrentIndex(1)
+
+        # 启用分析按钮
+        self.btn_data_scatter.setEnabled(True)
+        self.btn_data_hist.setEnabled(True)
+        self.btn_data_linear.setEnabled(True)
 
     def _data_scatter(self) -> None:
         """绘制散点图。"""
-        QMessageBox.information(
-            self, tr("dialog.not_implemented"), tr("data.scatter_placeholder")
-        )
+        if not hasattr(self, "_data_df") or self._data_df is None:
+            return
+        import matplotlib
+
+        matplotlib.use("QtAgg")
+        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+        from matplotlib.figure import Figure
+
+        xcol = self.combo_data_xcol.currentText()
+        ycol = self.combo_data_ycol.currentText()
+        df = self._data_df
+
+        fig = Figure(figsize=(5, 3), dpi=100)
+        ax = fig.add_subplot(111)
+        ax.scatter(df[xcol], df[ycol], s=20, alpha=0.7, edgecolors="k", linewidths=0.3)
+        ax.set_xlabel(xcol)
+        ax.set_ylabel(ycol)
+        ax.set_title(f"{ycol} vs {xcol}")
+        fig.tight_layout()
+
+        # 替换 plot widget 内容
+        self._embed_plot(fig)
 
     def _data_hist(self) -> None:
         """绘制直方图。"""
-        QMessageBox.information(
-            self, tr("dialog.not_implemented"), tr("data.hist_placeholder")
-        )
+        if not hasattr(self, "_data_df") or self._data_df is None:
+            return
+        import matplotlib
+
+        matplotlib.use("QtAgg")
+        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+        from matplotlib.figure import Figure
+
+        xcol = self.combo_data_xcol.currentText()
+        df = self._data_df
+
+        fig = Figure(figsize=(5, 3), dpi=100)
+        ax = fig.add_subplot(111)
+        ax.hist(df[xcol].dropna(), bins=20, edgecolor="k", alpha=0.7)
+        ax.set_xlabel(xcol)
+        ax.set_ylabel(tr("data.frequency"))
+        fig.tight_layout()
+
+        self._embed_plot(fig)
 
     def _data_linear(self) -> None:
         """执行线性拟合。"""
-        QMessageBox.information(
-            self, tr("dialog.not_implemented"), tr("data.linear_placeholder")
+        if not hasattr(self, "_data_df") or self._data_df is None:
+            return
+        import matplotlib
+        import numpy as np
+
+        matplotlib.use("QtAgg")
+        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+        from matplotlib.figure import Figure
+        from scipy.optimize import curve_fit
+
+        xcol = self.combo_data_xcol.currentText()
+        ycol = self.combo_data_ycol.currentText()
+        df = self._data_df
+
+        x = df[xcol].dropna().values.astype(float)
+        y = df[ycol].dropna().values.astype(float)
+        # 确保等长
+        mask = ~(np.isnan(x) | np.isnan(y))
+        x, y = x[mask], y[mask]
+
+        if len(x) < 2:
+            QMessageBox.warning(self, tr("dialog.info"), tr("data.insufficient_data"))
+            return
+
+        def linear(x, a, b):
+            return a * x + b
+
+        popt, pcov = curve_fit(linear, x, y)
+        a, b = popt
+        a_err = np.sqrt(pcov[0, 0])
+        b_err = np.sqrt(pcov[1, 1])
+
+        # R^2
+        y_pred = linear(x, *popt)
+        ss_res = np.sum((y - y_pred) ** 2)
+        ss_tot = np.sum((y - np.mean(y)) ** 2)
+        r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+
+        # 绘图
+        fig = Figure(figsize=(5, 3), dpi=100)
+        ax = fig.add_subplot(111)
+        ax.scatter(x, y, s=20, alpha=0.7, edgecolors="k", linewidths=0.3, label="Data")
+        xfit = np.linspace(x.min(), x.max(), 100)
+        ax.plot(xfit, linear(xfit, *popt), "r-", label="Fit")
+        ax.set_xlabel(xcol)
+        ax.set_ylabel(ycol)
+        ax.legend(fontsize=8)
+        fig.tight_layout()
+
+        self._embed_plot(fig)
+
+        # 显示拟合结果
+        self.lbl_data_fit_result.setText(
+            f"y = ({a:.4f} ± {a_err:.4f})x + ({b:.4f} ± {b_err:.4f})\n" f"R² = {r2:.4f}"
         )
 
     def _data_save_png(self) -> None:
         """保存当前图表为 PNG。"""
-        QMessageBox.information(
-            self, tr("dialog.not_implemented"), tr("data.save_png_placeholder")
-        )
+        # 检查 plot widget 中是否有 canvas
+        layout = self.widget_data_plot.layout()
+        if layout is None:
+            return
+        for i in range(layout.count()):
+            widget = layout.itemAt(i).widget()
+            if widget and hasattr(widget, "figure"):
+                path, _ = QFileDialog.getSaveFileName(
+                    self, tr("data.save_png_dialog"), "plot.png", "PNG (*.png)"
+                )
+                if path:
+                    widget.figure.savefig(path, dpi=150, bbox_inches="tight")
+                    QMessageBox.information(
+                        self, tr("dialog.done"), f"{tr('data.saved_to')} {path}"
+                    )
+                return
 
     def _data_copy_latex(self) -> None:
         """复制拟合结果为 LaTeX 公式。"""
+        text = self.lbl_data_fit_result.text() if self.lbl_data_fit_result else ""
+        if text and "y =" in text:
+            QApplication.clipboard().setText(text)
+            self.lbl_data_fit_result.setStyleSheet("color: green;")
+            from PySide6.QtCore import QTimer
+
+            QTimer.singleShot(1500, lambda: self.lbl_data_fit_result.setStyleSheet(""))
+
+    # ── Cache Cleaner 槽函数 ──────────────────────────
+
+    def _cache_clear_latex_output(self) -> None:
+        """清理 LaTeX 输出目录下 PDF 文件。"""
+        output_dir = (
+            self.edit_cache_latex_output.text().strip()
+            if self.edit_cache_latex_output
+            else "outputs/"
+        )
+        self._cache_delete_files(output_dir, ["*.pdf"], tr("cache_cleaner.cleared_output"))
+
+    def _cache_delete_aux(self) -> None:
+        """清理 LaTeX 辅助文件。"""
+        aux_dir = (
+            self.edit_cache_latex_aux.text().strip()
+            if self.edit_cache_latex_aux
+            else "outputs/.latextmp/"
+        )
+        files_only = (
+            self.check_cache_latex_files_only.isChecked()
+            if self.check_cache_latex_files_only
+            else False
+        )
+        patterns = [
+            "*.aux",
+            "*.log",
+            "*.toc",
+            "*.out",
+            "*.nav",
+            "*.snm",
+            "*.bbl",
+            "*.blg",
+            "*.fdb_latexmk",
+            "*.fls",
+            "*.synctex.gz",
+        ]
+        self._cache_delete_files(
+            aux_dir, patterns, tr("cache_cleaner.cleared_aux"), files_only=files_only
+        )
+
+    def _cache_auto_clear_latex(self) -> None:
+        """一键清理 LaTeX 输出 + 辅助文件。"""
+        self._cache_clear_latex_output()
+        self._cache_delete_aux()
+
+    def _cache_auto_clear_python(self) -> None:
+        """清理 Python 缓存。"""
+        import shutil
+        from pathlib import Path
+
+        base = Path.cwd()
+        cleared = 0
+
+        if self.check_cache_python_pycache and self.check_cache_python_pycache.isChecked():
+            for pycache in base.rglob("__pycache__"):
+                try:
+                    shutil.rmtree(pycache)
+                    cleared += 1
+                except OSError:
+                    pass
+
+        if self.check_cache_python_pyc and self.check_cache_python_pyc.isChecked():
+            for pyc in list(base.rglob("*.pyc")) + list(base.rglob("*.pyo")):
+                try:
+                    pyc.unlink()
+                    cleared += 1
+                except OSError:
+                    pass
+
         QMessageBox.information(
-            self, tr("dialog.not_implemented"), tr("data.copy_latex_placeholder")
+            self,
+            tr("dialog.done"),
+            f"{tr('cache_cleaner.cleared_python')} {cleared} {tr('cache_cleaner.items')}",
+        )
+
+    def _cache_delete_files(
+        self, dir_path: str, patterns: list, msg: str, files_only: bool = False
+    ) -> None:
+        """通用文件清理函数。"""
+        import shutil
+        from pathlib import Path
+
+        target = Path(dir_path)
+        if not target.exists():
+            QMessageBox.warning(
+                self, tr("dialog.warning"), f"{tr('cache_cleaner.dir_not_found')}: {dir_path}"
+            )
+            return
+
+        deleted = 0
+        for pattern in patterns:
+            for f in target.glob(pattern):
+                try:
+                    if files_only and f.is_dir():
+                        continue
+                    if f.is_file() or f.is_symlink():
+                        f.unlink()
+                        deleted += 1
+                    elif f.is_dir():
+                        shutil.rmtree(f)
+                        deleted += 1
+                except OSError:
+                    pass
+
+        QMessageBox.information(
+            self, tr("dialog.done"), f"{msg} {deleted} {tr('cache_cleaner.items')}"
         )
 
     # ── Settings 标签页槽函数 ──────────────────────────
 
+    # ── Project 标签页槽函数 ──────────────────────────
+
+    def _project_browse_folder(self) -> None:
+        """浏览选择项目父目录。"""
+        path = QFileDialog.getExistingDirectory(self, tr("dialog.select_output_folder"))
+        if path:
+            self.edit_parent_folder.setText(path)
+
+    def _project_create(self) -> None:
+        """执行项目结构创建。"""
+        exp_name = self.edit_experiment_name.text().strip() if self.edit_experiment_name else ""
+        if not exp_name:
+            QMessageBox.warning(self, tr("dialog.warning"), tr("project.warning.no_name"))
+            return
+
+        parent = self.edit_parent_folder.text().strip() if self.edit_parent_folder else ""
+        if not parent:
+            QMessageBox.warning(self, tr("dialog.warning"), tr("project.warning.no_path"))
+            return
+
+        template_key = (
+            self.combo_project_template.currentText() if self.combo_project_template else "Default"
+        )
+        gen_git = (
+            self.check_generate_gitignore.isChecked() if self.check_generate_gitignore else False
+        )
+        init_g = self.check_init_repo.isChecked() if self.check_init_repo else False
+
+        if self.text_log:
+            self.text_log.clear()
+            self.text_log.append(f"{tr('project.creating')} {exp_name}")
+            self.text_log.append(f"{tr('project.template')} {template_key}")
+
+        builder = ProjectBuilder(
+            experiment_name=exp_name,
+            target_parent=parent,
+            template_key=template_key,
+            generate_gitignore=gen_git,
+            init_repo=init_g,
+            overwrite=False,
+        )
+        result = builder.run()
+
+        if self.text_log:
+            if result.success:
+                self.text_log.append(f"{tr('project.done')} {result.project_path}")
+                self.text_log.append(f"{tr('project.files_created')} {len(result.files_created)}")
+                for f in result.files_created:
+                    self.text_log.append(f"  {f}")
+            else:
+                self.text_log.append(f"{tr('project.failed')} {result.error}")
+                QMessageBox.critical(self, tr("dialog.error"), result.error or "Unknown error")
+
     def _settings_reset(self) -> None:
         """恢复设置默认值。"""
         reply = QMessageBox.question(
-            self, tr("settings.confirm_reset"),
+            self,
+            tr("settings.confirm_reset"),
             tr("settings.confirm_reset_msg"),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )

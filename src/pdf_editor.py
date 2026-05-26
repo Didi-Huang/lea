@@ -2,6 +2,7 @@
 
 基于 PyMuPDF (fitz) 实现，不依赖外部工具（如 pdftk、qpdf）。
 """
+
 import logging
 import re
 from dataclasses import dataclass, field
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PdfInfo:
     """PDF 文件基本信息。"""
+
     total_pages: int
     width_points: float | None = None
     height_points: float | None = None
@@ -21,6 +23,7 @@ class PdfInfo:
 @dataclass
 class EditResult:
     """页面编辑操作结果。"""
+
     success: bool
     output_path: str | None = None
     page_count: int = 0
@@ -45,6 +48,7 @@ class PdfPageEditor:
             PdfInfo 包含总页数和首页尺寸（points）。
         """
         import fitz
+
         doc = fitz.open(path)
         total = doc.page_count
         info = PdfInfo(total_pages=total)
@@ -102,9 +106,7 @@ class PdfPageEditor:
                     raise ValueError(f"无法解析范围: {part!r}")
 
                 if start < 1 or end > total_pages or start > end:
-                    raise ValueError(
-                        f"页码范围 {start}-{end} 超出 PDF 总页数 (1-{total_pages})"
-                    )
+                    raise ValueError(f"页码范围 {start}-{end} 超出 PDF 总页数 (1-{total_pages})")
                 result.update(range(start, end + 1))
             else:
                 # 单数字
@@ -113,9 +115,7 @@ class PdfPageEditor:
                 except ValueError:
                     raise ValueError(f"无法解析页码: {part!r}")
                 if page < 1 or page > total_pages:
-                    raise ValueError(
-                        f"页码 {page} 超出范围 (1-{total_pages})"
-                    )
+                    raise ValueError(f"页码 {page} 超出范围 (1-{total_pages})")
                 result.add(page)
 
         return sorted(result)
@@ -139,6 +139,7 @@ class PdfPageEditor:
             EditResult 包含操作结果。
         """
         import fitz
+
         try:
             source_path = Path(source)
             if not source_path.exists():
@@ -171,8 +172,9 @@ class PdfPageEditor:
             doc.close()
 
             removed = total - len(keep_indices)
-            logger.info("PDF 页面删除完成: %d → %d 页 (删除 %d 页)",
-                         total, len(keep_indices), removed)
+            logger.info(
+                "PDF 页面删除完成: %d → %d 页 (删除 %d 页)", total, len(keep_indices), removed
+            )
 
             return EditResult(
                 success=True,
@@ -201,6 +203,7 @@ class PdfPageEditor:
             EditResult 包含操作结果。
         """
         import fitz
+
         try:
             source_path = Path(source)
             if not source_path.exists():
@@ -225,8 +228,7 @@ class PdfPageEditor:
             doc.save(str(output_path_obj))
             doc.close()
 
-            logger.info("PDF 页面提取完成: 提取 %d 页 → %s",
-                         len(select_indices), output_path)
+            logger.info("PDF 页面提取完成: 提取 %d 页 → %s", len(select_indices), output_path)
 
             return EditResult(
                 success=True,

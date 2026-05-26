@@ -5,6 +5,7 @@
 
 依赖: PyMuPDF (fitz), python-pptx, Pillow
 """
+
 import logging
 from dataclasses import dataclass
 from io import BytesIO
@@ -16,9 +17,9 @@ logger = logging.getLogger(__name__)
 # Beamer 标准宽高比 → PPTX 幻灯片尺寸（英寸）
 # python-pptx 用 Inches，这些值对应标准幻灯片尺寸
 ASPECT_RATIO_MAP: dict[tuple[int, int], tuple[float, float]] = {
-    (4, 3):   (10.00, 7.50),    # 标准 4:3
-    (16, 9):  (10.00, 5.625),   # 宽屏 16:9
-    (16, 10): (10.00, 6.25),    # 16:10
+    (4, 3): (10.00, 7.50),  # 标准 4:3
+    (16, 9): (10.00, 5.625),  # 宽屏 16:9
+    (16, 10): (10.00, 6.25),  # 16:10
 }
 
 DEFAULT_DPI: int = 250
@@ -28,6 +29,7 @@ DEFAULT_DPI: int = 250
 @dataclass
 class ConversionResult:
     """转换结果数据容器。"""
+
     success: bool
     output_path: str | None = None
     error: str | None = None
@@ -130,7 +132,8 @@ class BtpConvertor:
             slide = prs.slides.add_slide(blank_layout)
             slide.shapes.add_picture(
                 BytesIO(img_bytes),
-                0, 0,
+                0,
+                0,
                 Inches(pptx_width),
                 Inches(pptx_height),
             )
@@ -148,8 +151,9 @@ class BtpConvertor:
         output_path = self.output_folder / out_name
         prs.save(str(output_path))
 
-        logger.info("转换完成: %s -> %s (%d 页, %d DPI)",
-                     self.source, output_path, total_pages, self.dpi)
+        logger.info(
+            "转换完成: %s -> %s (%d 页, %d DPI)", self.source, output_path, total_pages, self.dpi
+        )
 
         return {"success": True, "output_path": str(output_path)}
 
