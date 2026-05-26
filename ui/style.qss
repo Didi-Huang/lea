@@ -1,0 +1,301 @@
+/* ================================================================
+   LEA — Lab Experiment Assistant 主题样式
+   简洁专业风格：白底 + 蓝点缀 + 微圆角 + 清晰层级
+   ================================================================ */
+
+/* ── 全局 ─────────────────────────────────────────── */
+QMainWindow {
+    background: #f5f6f8;
+}
+
+QWidget {
+    font-size: 13px;
+    color: #2c3e50;
+}
+
+/* ── 标签页栏 ──────────────────────────────────────── */
+QTabWidget::pane {
+    border: 1px solid #dcdde1;
+    border-top: none;
+    background: #ffffff;
+    border-radius: 0 0 4px 4px;
+    padding: 6px;
+}
+
+QTabBar::tab {
+    background: #ecf0f1;
+    border: 1px solid #dcdde1;
+    border-bottom: none;
+    padding: 8px 18px;
+    margin-right: 2px;
+    border-radius: 4px 4px 0 0;
+}
+
+QTabBar::tab:selected {
+    background: #ffffff;
+    border-bottom: 2px solid #3498db;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+QTabBar::tab:hover:!selected {
+    background: #dfe6e9;
+}
+
+/* ── 分组框 ────────────────────────────────────────── */
+QGroupBox {
+    border: 1px solid #dcdde1;
+    border-radius: 6px;
+    margin-top: 14px;
+    padding: 12px 10px 10px 10px;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 8px;
+    color: #3498db;
+}
+
+/* ── 按钮 ──────────────────────────────────────────── */
+QPushButton {
+    background: #3498db;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 16px;
+    font-weight: bold;
+    min-height: 24px;
+}
+
+QPushButton:hover {
+    background: #2980b9;
+}
+
+QPushButton:pressed {
+    background: #2471a3;
+}
+
+QPushButton:disabled {
+    background: #bdc3c7;
+    color: #7f8c8d;
+}
+
+/* 次要操作按钮（浏览、取消等） */
+QPushButton#btn_btp_io_source,
+QPushButton#btn_btp_io_output_folder,
+QPushButton#btn_data_source,
+QPushButton#parent_folder_path_btn,
+QPushButton#btn_pdf_edit_source,
+QPushButton#btn_pdf_edit_output,
+QPushButton#btn_pdf_edit_info,
+QPushButton#btn_settings_cancel,
+QPushButton#btn_settings_reset,
+QPushButton#btn_cache_latex_clear_output,
+QPushButton#btn_cache_latex_delete_aux,
+QPushButton#btn_snippets_insert {
+    background: #ecf0f1;
+    color: #2c3e50;
+    border: 1px solid #dcdde1;
+    font-weight: normal;
+}
+
+QPushButton#btn_btp_io_source:hover,
+QPushButton#btn_btp_io_output_folder:hover,
+QPushButton#btn_data_source:hover,
+QPushButton#parent_folder_path_btn:hover,
+QPushButton#btn_pdf_edit_source:hover,
+QPushButton#btn_pdf_edit_output:hover,
+QPushButton#btn_pdf_edit_info:hover,
+QPushButton#btn_settings_cancel:hover,
+QPushButton#btn_settings_reset:hover,
+QPushButton#btn_cache_latex_clear_output:hover,
+QPushButton#btn_cache_latex_delete_aux:hover,
+QPushButton#btn_snippets_insert:hover {
+    background: #dfe6e9;
+}
+
+/* 清除操作按钮 */
+QPushButton#btn_auto_clear_latex,
+QPushButton#btn_auto_clear_python {
+    background: #e74c3c;
+    color: #ffffff;
+}
+
+QPushButton#btn_auto_clear_latex:hover,
+QPushButton#btn_auto_clear_python:hover {
+    background: #c0392b;
+}
+
+/* 保存按钮 */
+QPushButton#btn_settings_save {
+    background: #27ae60;
+    color: #ffffff;
+}
+
+QPushButton#btn_settings_save:hover {
+    background: #219a52;
+}
+
+/* 创建项目按钮 */
+QPushButton#btn_project_create {
+    background: #8e44ad;
+    color: #ffffff;
+    font-size: 14px;
+}
+
+QPushButton#btn_project_create:hover {
+    background: #7d3c98;
+}
+
+/* ── 输入框 ────────────────────────────────────────── */
+QLineEdit,
+QSpinBox,
+QComboBox {
+    border: 1px solid #dcdde1;
+    border-radius: 4px;
+    padding: 4px 8px;
+    background: #ffffff;
+    min-height: 22px;
+}
+
+QLineEdit:focus,
+QSpinBox:focus,
+QComboBox:focus {
+    border-color: #3498db;
+}
+
+QComboBox::drop-down {
+    border: none;
+    padding-right: 6px;
+}
+
+QComboBox QAbstractItemView {
+    border: 1px solid #dcdde1;
+    border-radius: 4px;
+    selection-background-color: #3498db;
+    selection-color: #ffffff;
+}
+
+/* ── 进度条 ────────────────────────────────────────── */
+QProgressBar {
+    border: 1px solid #dcdde1;
+    border-radius: 4px;
+    text-align: center;
+    background: #ecf0f1;
+    height: 20px;
+}
+
+QProgressBar::chunk {
+    background: #3498db;
+    border-radius: 3px;
+}
+
+/* ── 表格 ──────────────────────────────────────────── */
+QTableView {
+    border: 1px solid #dcdde1;
+    border-radius: 4px;
+    gridline-color: #ecf0f1;
+    selection-background-color: #3498db;
+    selection-color: #ffffff;
+    alternate-background-color: #f8f9fa;
+}
+
+QTableView::item {
+    padding: 3px 6px;
+}
+
+QHeaderView::section {
+    background: #ecf0f1;
+    border: 1px solid #dcdde1;
+    border-bottom: 2px solid #bdc3c7;
+    padding: 4px 8px;
+    font-weight: bold;
+}
+
+/* ── 分割器 ────────────────────────────────────────── */
+QSplitter::handle {
+    background: #dcdde1;
+    width: 3px;
+}
+
+QSplitter::handle:hover {
+    background: #3498db;
+}
+
+/* ── 日志 / 文本浏览器 ─────────────────────────────── */
+QTextBrowser,
+QPlainTextEdit {
+    border: 1px solid #dcdde1;
+    border-radius: 4px;
+    background: #fafbfc;
+    padding: 4px;
+}
+
+/* ── 复选框 / 单选按钮 ─────────────────────────────── */
+QCheckBox::indicator,
+QRadioButton::indicator {
+    width: 16px;
+    height: 16px;
+}
+
+QCheckBox::indicator:checked,
+QRadioButton::indicator:checked {
+    background: #3498db;
+    border: 2px solid #3498db;
+    border-radius: 3px;
+}
+
+/* ── 列表 ──────────────────────────────────────────── */
+QListWidget {
+    border: 1px solid #dcdde1;
+    border-radius: 4px;
+    background: #ffffff;
+}
+
+QListWidget::item {
+    padding: 4px 8px;
+}
+
+QListWidget::item:selected {
+    background: #3498db;
+    color: #ffffff;
+}
+
+QListWidget::item:hover:!selected {
+    background: #ecf0f1;
+}
+
+/* ── 状态栏 ────────────────────────────────────────── */
+QStatusBar {
+    background: #ecf0f1;
+    border-top: 1px solid #dcdde1;
+    padding: 2px 8px;
+    font-size: 12px;
+    color: #7f8c8d;
+}
+
+/* ── 滚动条 ────────────────────────────────────────── */
+QScrollBar:vertical {
+    border: none;
+    background: #f5f6f8;
+    width: 8px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:vertical {
+    background: #bdc3c7;
+    border-radius: 4px;
+    min-height: 20px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #95a5a6;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0;
+}

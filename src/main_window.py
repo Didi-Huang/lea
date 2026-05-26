@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QRadioButton,
     QSpinBox,
+    QSplitter,
     QTableView,
     QTabWidget,
     QTextBrowser,
@@ -89,6 +90,12 @@ class LabExpAssistant(QMainWindow):
         self.btn_snippets_copy = self.findChild(QPushButton, "btn_snippets_copy")
         self.btn_snippets_insert = self.findChild(QPushButton, "btn_snippets_insert")
         self._snippets_data: list = []
+
+        # 分割器默认比例（列表 30% / 预览 70%）
+        splitter = self.findChild(QSplitter, "splitter_snippets")
+        if splitter:
+            splitter.setSizes([200, 500])
+
         self._load_snippets_from_disk()
 
     def _load_snippets_from_disk(self) -> None:
@@ -202,6 +209,11 @@ class LabExpAssistant(QMainWindow):
         self._widget_label_btp_format = self.findChild(QLabel, "label_btp_io_output_format")
         self._widget_label_btp_custom = self.findChild(QLabel, "label_btp_custom_name")
 
+        # 工具提示
+        self.btn_btp_io_source.setToolTip(tr("convertor.tooltip_source"))
+        self.btn_btp_io_output_folder.setToolTip(tr("convertor.tooltip_output"))
+        self.btn_btp_convert.setToolTip(tr("convertor.tooltip_convert"))
+
         # DPI 和进度条（UI 文件定义）
         self.spin_btp_dpi = self.findChild(QSpinBox, "spin_btp_dpi")
         self.progress_btp = self.findChild(QProgressBar, "progress_btp")
@@ -269,6 +281,14 @@ class LabExpAssistant(QMainWindow):
         self.btn_data_scatter.setEnabled(False)
         self.btn_data_hist.setEnabled(False)
         self.btn_data_linear.setEnabled(False)
+
+        # 表格交替行颜色
+        self.table_data_preview.setAlternatingRowColors(True)
+
+        # 工具提示
+        self.btn_data_load.setToolTip(tr("data.tooltip_load"))
+        self.btn_data_scatter.setToolTip(tr("data.tooltip_scatter"))
+        self.btn_data_linear.setToolTip(tr("data.tooltip_linear"))
 
         # 存储 UI 文件中的控件引用，用于翻译
         self._group_data_source = self.findChild(QGroupBox, "group_data_source")
@@ -985,6 +1005,12 @@ class LabExpAssistant(QMainWindow):
         self.btn_data_scatter.setEnabled(True)
         self.btn_data_hist.setEnabled(True)
         self.btn_data_linear.setEnabled(True)
+
+        # 状态栏消息
+        self.statusBar().showMessage(
+            f"{tr('data.loaded')} {Path(source).name} — "
+            f"{df.shape[0]} {tr('data.rows')}, {df.shape[1]} {tr('data.columns')}"
+        )
 
     def _data_scatter(self) -> None:
         """绘制散点图。"""

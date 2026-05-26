@@ -179,5 +179,12 @@
   "cache_cleaner.cleared_aux": "Cleared LaTeX auxiliary files: ",
   "cache_cleaner.cleared_python": "Cleared Python cache items: ",
   "cache_cleaner.items": "item(s)",
-  "cache_cleaner.dir_not_found": "Directory not found"
+  "cache_cleaner.dir_not_found": "Directory not found",
+  "convertor.tooltip_source": "Select the Beamer PDF file to convert",
+  "convertor.tooltip_output": "Choose where to save the PPTX output",
+  "convertor.tooltip_convert": "Start PDF to PPTX conversion",
+  "data.tooltip_load": "Load the selected CSV file into the table",
+  "data.tooltip_scatter": "Plot X vs Y scatter chart",
+  "data.tooltip_linear": "Perform linear curve fitting and display results",
+  "data.loaded": "Loaded:"
 }

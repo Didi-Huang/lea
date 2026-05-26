@@ -179,5 +179,12 @@
   "cache_cleaner.cleared_aux": "已清理 LaTeX 辅助文件: ",
   "cache_cleaner.cleared_python": "已清理 Python 缓存: ",
   "cache_cleaner.items": "项",
-  "cache_cleaner.dir_not_found": "目录未找到"
+  "cache_cleaner.dir_not_found": "目录未找到",
+  "convertor.tooltip_source": "选择要转换的 Beamer PDF 文件",
+  "convertor.tooltip_output": "选择 PPTX 输出文件夹",
+  "convertor.tooltip_convert": "开始 PDF 到 PPTX 转换",
+  "data.tooltip_load": "加载选中的 CSV 文件到表格",
+  "data.tooltip_scatter": "绘制 X 轴对 Y 轴散点图",
+  "data.tooltip_linear": "执行线性曲线拟合并显示结果",
+  "data.loaded": "已加载:"
 }

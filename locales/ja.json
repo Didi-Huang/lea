@@ -179,5 +179,12 @@
   "cache_cleaner.cleared_aux": "LaTeX補助ファイルを削除: ",
   "cache_cleaner.cleared_python": "Pythonキャッシュを削除: ",
   "cache_cleaner.items": "件",
-  "cache_cleaner.dir_not_found": "ディレクトリが見つかりません"
+  "cache_cleaner.dir_not_found": "ディレクトリが見つかりません",
+  "convertor.tooltip_source": "変換する Beamer PDF ファイルを選択",
+  "convertor.tooltip_output": "PPTX 出力先フォルダを選択",
+  "convertor.tooltip_convert": "PDF → PPTX 変換を開始",
+  "data.tooltip_load": "選択した CSV ファイルをテーブルに読み込み",
+  "data.tooltip_scatter": "X 対 Y の散布図を描画",
+  "data.tooltip_linear": "線形カーブフィッティングを実行して結果を表示",
+  "data.loaded": "読み込み完了:"
 }
