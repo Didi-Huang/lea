@@ -490,6 +490,7 @@ class LabExpAssistant(QMainWindow):
                 self.combo_settings_font.setCurrentText(font_family)
             font_size = config.get("font_size", 10)
             self.spin_settings_font_size.setValue(font_size)
+            self._apply_appearance()
 
             # 默认值
             default_dpi = config.get("default_dpi", DPI_DEFAULT)
@@ -534,6 +535,8 @@ class LabExpAssistant(QMainWindow):
             "default_format": self.combo_settings_default_format.currentText(),
         }
         self._config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), "utf-8")
+        # 应用外观
+        self._apply_appearance()
         # 同时保存语言到全局并重新应用
         set_language(self._get_selected_language())
         self._apply_language(_current_lang)
@@ -580,6 +583,9 @@ class LabExpAssistant(QMainWindow):
         self.btn_settings_save.clicked.connect(self._save_settings)
         self.btn_settings_cancel.clicked.connect(self._load_settings)
         self.btn_settings_reset.clicked.connect(self._settings_reset)
+        # 外观实时应用
+        self.combo_settings_font.currentFontChanged.connect(self._on_appearance_changed)
+        self.spin_settings_font_size.valueChanged.connect(self._on_appearance_changed)
 
     # ── Convertor 槽函数 ──────────────────────────────
 
@@ -1154,6 +1160,22 @@ class LabExpAssistant(QMainWindow):
             else:
                 self.text_log.append(f"{tr('project.failed')} {result.error}")
                 QMessageBox.critical(self, tr("dialog.error"), result.error or "Unknown error")
+
+    def _on_appearance_changed(self, *args) -> None:
+        """字体或字号变化时关闭下拉框并应用外观。"""
+        if self.combo_settings_font:
+            self.combo_settings_font.hidePopup()
+        self._apply_appearance()
+
+    def _apply_appearance(self) -> None:
+        """将字体族和字号应用到整个应用。"""
+        from PySide6.QtGui import QFont
+
+        family = self.combo_settings_font.currentText() if self.combo_settings_font else ""
+        size = self.spin_settings_font_size.value() if self.spin_settings_font_size else 10
+        if family:
+            font = QFont(family, size)
+            QApplication.setFont(font)
 
     def _settings_reset(self) -> None:
         """恢复设置默认值。"""
