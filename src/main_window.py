@@ -18,8 +18,10 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
     QMainWindow,
     QMessageBox,
+    QPlainTextEdit,
     QProgressBar,
     QPushButton,
     QRadioButton,
@@ -58,6 +60,7 @@ class LabExpAssistant(QMainWindow):
         self._init_settings_controls()  # Settings 标签页控件
         self._init_cache_cleaner_controls()  # Cache Cleaner 标签页控件
         self._init_project_controls()  # Project 标签页控件
+        self._init_snippets_controls()  # Snippets 标签页控件
         self._connect_signals()
         self._load_settings()  # 从 user_data/config.json 加载设置
         self._apply_language(_current_lang)  # 应用初始语言
@@ -75,6 +78,73 @@ class LabExpAssistant(QMainWindow):
         self.check_init_repo = self.findChild(QCheckBox, "check_init_repo")
         self.btn_project_create = self.findChild(QPushButton, "btn_project_create")
         self.text_log = self.findChild(QTextBrowser, "text_log")
+
+    # ── Snippets 页控件 ──────────────────────────────
+
+    def _init_snippets_controls(self) -> None:
+        """初始化 Snippets 标签页控件并加载代码片段。"""
+        self.combo_snippets_category = self.findChild(QComboBox, "combo_snippets_category")
+        self.list_snippets = self.findChild(QListWidget, "list_snippets")
+        self.edit_snippets_preview = self.findChild(QPlainTextEdit, "edit_snippets_preview")
+        self.btn_snippets_copy = self.findChild(QPushButton, "btn_snippets_copy")
+        self.btn_snippets_insert = self.findChild(QPushButton, "btn_snippets_insert")
+        self._snippets_data: list = []
+        self._load_snippets_from_disk()
+
+    def _load_snippets_from_disk(self) -> None:
+        """从 user_data/snippets/ 加载 JSON 片段文件。"""
+        snippets_dir = PROJECT_ROOT / "user_data" / "snippets"
+        self._snippets_data = []
+        if not snippets_dir.exists():
+            return
+        for f in sorted(snippets_dir.glob("*.json")):
+            try:
+                self._snippets_data.append(json.loads(f.read_text("utf-8")))
+            except (json.JSONDecodeError, OSError):
+                pass
+        self._refresh_snippets_list()
+
+    def _refresh_snippets_list(self) -> None:
+        """根据分类过滤刷新列表。"""
+        if not self.list_snippets:
+            return
+        self.list_snippets.clear()
+        category = (
+            self.combo_snippets_category.currentText() if self.combo_snippets_category else "All"
+        )
+        for item in self._snippets_data:
+            if category == "All" or item.get("category", "") == category:
+                self.list_snippets.addItem(item.get("title", "Untitled"))
+
+    def _on_snippet_selected(self) -> None:
+        """列表选中项变化时更新预览。"""
+        if not self.list_snippets or not self.edit_snippets_preview:
+            return
+        row = self.list_snippets.currentRow()
+        if 0 <= row < len(self._displayed_indices()):
+            idx = self._displayed_indices()[row]
+            self.edit_snippets_preview.setPlainText(self._snippets_data[idx].get("code", ""))
+
+    def _displayed_indices(self) -> list:
+        """返回当前过滤条件下显示的片段在 _snippets_data 中的索引。"""
+        category = (
+            self.combo_snippets_category.currentText() if self.combo_snippets_category else "All"
+        )
+        return [
+            i
+            for i, item in enumerate(self._snippets_data)
+            if category == "All" or item.get("category", "") == category
+        ]
+
+    def _snippets_copy(self) -> None:
+        """复制当前代码到剪贴板。"""
+        code = self.edit_snippets_preview.toPlainText() if self.edit_snippets_preview else ""
+        if code:
+            QApplication.clipboard().setText(code)
+
+    def _snippets_insert(self) -> None:
+        """复制代码到剪贴板（同 copy，用于快速复制到项目）。"""
+        self._snippets_copy()
 
     # ── UI 加载 ────────────────────────────────────────
     # ── UI 加载 ────────────────────────────────────────
@@ -95,13 +165,10 @@ class LabExpAssistant(QMainWindow):
 
         size = ui_widget.size()
         ui_widget.deleteLater()
-        self.resize(size)
+        # 设置合理的最小尺寸和默认尺寸
+        self.setMinimumSize(680, 500)
+        self.resize(max(size.width(), 750), max(size.height(), 580))
         self.setWindowTitle(tr("app.title"))
-
-        # 默认选中 Convertor 标签页
-        tab_widget = self.findChild(QTabWidget, "tabWidget")
-        if tab_widget:
-            tab_widget.setCurrentIndex(3)
 
     # ── Convertor 页控件 ────────────────────────────────
 
@@ -522,6 +589,19 @@ class LabExpAssistant(QMainWindow):
             if idx >= 0:
                 self.combo_settings_default_format.setCurrentIndex(idx)
 
+            # 恢复窗口几何和最后标签页
+            geo_b64 = config.get("window_geometry", "")
+            if geo_b64:
+                import base64
+
+                from PySide6.QtCore import QByteArray
+
+                self.restoreGeometry(QByteArray.fromBase64(base64.b64decode(geo_b64)))
+            last_tab = config.get("last_tab_index", 0)
+            tab_widget = self.findChild(QTabWidget, "tabWidget")
+            if tab_widget and 0 <= last_tab < tab_widget.count():
+                tab_widget.setCurrentIndex(last_tab)
+
         except (json.JSONDecodeError, OSError):
             pass  # 文件损坏就忽略，使用默认值
 
@@ -543,6 +623,16 @@ class LabExpAssistant(QMainWindow):
             else:
                 return
 
+        # 保存窗口几何
+        import base64
+
+        geo_bytes = self.saveGeometry().toBase64().data()
+        geo_b64 = base64.b64encode(geo_bytes).decode("ascii")
+
+        # 当前标签页
+        tab_widget = self.findChild(QTabWidget, "tabWidget")
+        last_tab = tab_widget.currentIndex() if tab_widget else 0
+
         config: dict = {
             "language": self._get_selected_language(),
             "name": self.edit_settings_name.text().strip(),
@@ -551,6 +641,8 @@ class LabExpAssistant(QMainWindow):
             "font_size": self.spin_settings_font_size.value(),
             "default_dpi": self.spin_settings_default_dpi.value(),
             "default_format": self.combo_settings_default_format.currentText(),
+            "window_geometry": geo_b64,
+            "last_tab_index": last_tab,
         }
         self._config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), "utf-8")
         # 应用外观
@@ -592,6 +684,18 @@ class LabExpAssistant(QMainWindow):
         self.btn_data_linear.clicked.connect(self._data_linear)
         self.btn_data_save_png.clicked.connect(self._data_save_png)
         self.btn_data_copy_latex.clicked.connect(self._data_copy_latex)
+
+        # Cache Cleaner 标签页
+        self.btn_cache_latex_clear_output.clicked.connect(self._cache_clear_latex_output)
+        self.btn_cache_latex_delete_aux.clicked.connect(self._cache_delete_aux)
+        self.btn_auto_clear_latex.clicked.connect(self._cache_auto_clear_latex)
+        self.btn_auto_clear_python.clicked.connect(self._cache_auto_clear_python)
+
+        # Snippets 标签页
+        self.combo_snippets_category.currentTextChanged.connect(self._refresh_snippets_list)
+        self.list_snippets.currentRowChanged.connect(self._on_snippet_selected)
+        self.btn_snippets_copy.clicked.connect(self._snippets_copy)
+        self.btn_snippets_insert.clicked.connect(self._snippets_insert)
 
         # Project 标签页
         self.parent_folder_path_btn.clicked.connect(self._project_browse_folder)
