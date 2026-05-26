@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFileDialog,
+    QFontComboBox,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -24,6 +25,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QSpinBox,
     QTabWidget,
+    QTableView,
     QTextBrowser,
     QVBoxLayout,
     QWidget,
@@ -69,7 +71,10 @@ class LabExpAssistant(QMainWindow):
         self._init_convertor_controls()
         self._init_btp_extra_controls()   # DPI + 进度条
         self._init_pdf_editor_controls()  # PDF 页面编辑器
+        self._init_data_controls()       # Data 标签页控件
+        self._init_settings_controls()   # Settings 标签页控件
         self._connect_signals()
+        self._load_settings()            # 从 user_data/config.json 加载设置
 
     # ── UI 加载 ────────────────────────────────────────
 
@@ -230,6 +235,154 @@ class LabExpAssistant(QMainWindow):
         # 保存内部状态
         self._pdf_source_path: str = ""
 
+    # ── Data 页控件 ────────────────────────────────────
+
+    def _init_data_controls(self) -> None:
+        """初始化 Data 标签页的控件引用。"""
+        # 数据源
+        self.edit_data_source = self.findChild(QLineEdit, "edit_data_source")
+        self.btn_data_source = self.findChild(QPushButton, "btn_data_source")
+        self.combo_data_encoding = self.findChild(QComboBox, "combo_data_encoding")
+        self.combo_data_separator = self.findChild(QComboBox, "combo_data_separator")
+        self.spin_data_header = self.findChild(QSpinBox, "spin_data_header")
+        self.btn_data_load = self.findChild(QPushButton, "btn_data_load")
+
+        # 预览
+        self.table_data_preview = self.findChild(QTableView, "table_data_preview")
+        self.lbl_data_stats = self.findChild(QLabel, "lbl_data_stats")
+
+        # 分析
+        self.combo_data_xcol = self.findChild(QComboBox, "combo_data_xcol")
+        self.combo_data_ycol = self.findChild(QComboBox, "combo_data_ycol")
+        self.btn_data_scatter = self.findChild(QPushButton, "btn_data_scatter")
+        self.btn_data_hist = self.findChild(QPushButton, "btn_data_hist")
+        self.btn_data_linear = self.findChild(QPushButton, "btn_data_linear")
+        self.widget_data_plot = self.findChild(QWidget, "widget_data_plot")
+        self.lbl_data_fit_result = self.findChild(QLabel, "lbl_data_fit_result")
+        self.btn_data_save_png = self.findChild(QPushButton, "btn_data_save_png")
+        self.btn_data_copy_latex = self.findChild(QPushButton, "btn_data_copy_latex")
+
+        # 初始禁用分析按钮（数据未加载时不可用）
+        self.btn_data_scatter.setEnabled(False)
+        self.btn_data_hist.setEnabled(False)
+        self.btn_data_linear.setEnabled(False)
+
+    # ── Settings 页控件 ────────────────────────────────
+
+    def _init_settings_controls(self) -> None:
+        """初始化 Settings 标签页的控件引用。"""
+        # 语言
+        self.radio_settings_lang_zh = self.findChild(QRadioButton, "radio_settings_lang_zh")
+        self.radio_settings_lang_ja = self.findChild(QRadioButton, "radio_settings_lang_ja")
+        self.radio_settings_lang_en = self.findChild(QRadioButton, "radio_settings_lang_en")
+
+        # 个人信息
+        self.edit_settings_name = self.findChild(QLineEdit, "edit_settings_name")
+        self.edit_settings_student_id = self.findChild(QLineEdit, "edit_settings_student_id")
+
+        # 外观
+        self.combo_settings_font = self.findChild(QFontComboBox, "combo_settings_font")
+        self.spin_settings_font_size = self.findChild(QSpinBox, "spin_settings_font_size")
+
+        # 默认值
+        self.spin_settings_default_dpi = self.findChild(QSpinBox, "spin_settings_default_dpi")
+        self.combo_settings_default_format = self.findChild(QComboBox, "combo_settings_default_format")
+
+        # 按钮
+        self.btn_settings_reset = self.findChild(QPushButton, "btn_settings_reset")
+        self.btn_settings_save = self.findChild(QPushButton, "btn_settings_save")
+        self.btn_settings_cancel = self.findChild(QPushButton, "btn_settings_cancel")
+
+    # ── 设置加载 / 保存 ─────────────────────────────────
+
+    @property
+    def _config_path(self) -> Path:
+        """返回 user_data/config.json 的路径。"""
+        return Path(__file__).resolve().parent / "user_data" / "config.json"
+
+    def _load_settings(self) -> None:
+        """从 user_data/config.json 加载设置到界面控件。"""
+        if not self._config_path.exists():
+            return
+        try:
+            config: dict = json.loads(self._config_path.read_text("utf-8"))
+
+            # 语言
+            lang = config.get("language", "zh_CN")
+            if lang == "ja":
+                self.radio_settings_lang_ja.setChecked(True)
+            elif lang == "en":
+                self.radio_settings_lang_en.setChecked(True)
+            else:
+                self.radio_settings_lang_zh.setChecked(True)
+
+            # 个人信息
+            self.edit_settings_name.setText(config.get("name", ""))
+            self.edit_settings_student_id.setText(config.get("student_id", ""))
+
+            # 外观
+            font_family = config.get("font_family", "")
+            if font_family:
+                self.combo_settings_font.setCurrentText(font_family)
+            font_size = config.get("font_size", 10)
+            self.spin_settings_font_size.setValue(font_size)
+
+            # 默认值
+            default_dpi = config.get("default_dpi", DPI_DEFAULT)
+            self.spin_settings_default_dpi.setValue(default_dpi)
+            # 同步 Convertor 标签页的 DPI
+            if hasattr(self, "spin_btp_dpi"):
+                self.spin_btp_dpi.setValue(default_dpi)
+
+            default_format = config.get("default_format", "PDF to PPTX")
+            idx = self.combo_settings_default_format.findText(default_format)
+            if idx >= 0:
+                self.combo_settings_default_format.setCurrentIndex(idx)
+
+        except (json.JSONDecodeError, OSError):
+            pass  # 文件损坏就忽略，使用默认值
+
+    def _save_settings(self) -> None:
+        """保存当前设置到 user_data/config.json。
+
+        如果 user_data/ 目录不存在，弹窗询问是否创建。
+        """
+        user_data_dir = Path(__file__).resolve().parent / "user_data"
+        if not user_data_dir.exists():
+            reply = QMessageBox.question(
+                self,
+                "目录不存在",
+                "user_data/ 目录不存在。\n\n"
+                "该目录用于存放个人设置和用户数据（不会被 Git 追踪）。\n"
+                "是否创建？",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                user_data_dir.mkdir(parents=True, exist_ok=True)
+            else:
+                return
+
+        config: dict = {
+            "language": self._get_selected_language(),
+            "name": self.edit_settings_name.text().strip(),
+            "student_id": self.edit_settings_student_id.text().strip(),
+            "font_family": self.combo_settings_font.currentText(),
+            "font_size": self.spin_settings_font_size.value(),
+            "default_dpi": self.spin_settings_default_dpi.value(),
+            "default_format": self.combo_settings_default_format.currentText(),
+        }
+        self._config_path.write_text(
+            json.dumps(config, indent=2, ensure_ascii=False), "utf-8"
+        )
+
+    def _get_selected_language(self) -> str:
+        """返回当前选中的语言标识。"""
+        if self.radio_settings_lang_ja.isChecked():
+            return "ja"
+        elif self.radio_settings_lang_en.isChecked():
+            return "en"
+        return "zh_CN"
+
     # ── 信号槽连接 ─────────────────────────────────────
 
     def _connect_signals(self) -> None:
@@ -246,6 +399,20 @@ class LabExpAssistant(QMainWindow):
         self.btn_pdf_edit_output.clicked.connect(self._pdf_browse_output)
         self.btn_pdf_edit_execute.clicked.connect(self._pdf_execute)
         self.edit_pdf_edit_range.textChanged.connect(self._pdf_on_input_changed)
+
+        # Data 标签页
+        self.btn_data_source.clicked.connect(self._data_browse_source)
+        self.btn_data_load.clicked.connect(self._data_load_csv)
+        self.btn_data_scatter.clicked.connect(self._data_scatter)
+        self.btn_data_hist.clicked.connect(self._data_hist)
+        self.btn_data_linear.clicked.connect(self._data_linear)
+        self.btn_data_save_png.clicked.connect(self._data_save_png)
+        self.btn_data_copy_latex.clicked.connect(self._data_copy_latex)
+
+        # Settings 标签页
+        self.btn_settings_save.clicked.connect(self._save_settings)
+        self.btn_settings_cancel.clicked.connect(self._load_settings)
+        self.btn_settings_reset.clicked.connect(self._settings_reset)
 
     # ── Convertor 槽函数 ──────────────────────────────
 
@@ -432,7 +599,68 @@ class LabExpAssistant(QMainWindow):
             QMessageBox.critical(self, "错误", result.error)
 
 
-# ── 入口 ──────────────────────────────────────────────
+    # ── Data 标签页槽函数 ──────────────────────────────
+
+    def _data_browse_source(self) -> None:
+        """浏览选择 CSV 数据文件。"""
+        path, _ = QFileDialog.getOpenFileName(
+            self, "选择 CSV 文件", "",
+            "CSV Files (*.csv);;TSV Files (*.tsv);;All Files (*)",
+        )
+        if path:
+            self.edit_data_source.setText(path)
+
+    def _data_load_csv(self) -> None:
+        """加载 CSV 数据并显示预览。"""
+        source = self.edit_data_source.text().strip()
+        if not source:
+            QMessageBox.warning(self, "提示", "请先选择数据文件")
+            return
+        # TODO: 实现 CSV 加载和 QTableView 预览
+        QMessageBox.information(
+            self, "待实现",
+            "CSV 数据加载功能将在下一步实现。\n"
+            f"已选择文件: {source}"
+        )
+
+    def _data_scatter(self) -> None:
+        """绘制散点图。"""
+        QMessageBox.information(self, "待实现", "散点图功能将在下一步实现。")
+
+    def _data_hist(self) -> None:
+        """绘制直方图。"""
+        QMessageBox.information(self, "待实现", "直方图功能将在下一步实现。")
+
+    def _data_linear(self) -> None:
+        """执行线性拟合。"""
+        QMessageBox.information(self, "待实现", "线性拟合功能将在下一步实现。")
+
+    def _data_save_png(self) -> None:
+        """保存当前图表为 PNG。"""
+        QMessageBox.information(self, "待实现", "图片保存功能将在下一步实现。")
+
+    def _data_copy_latex(self) -> None:
+        """复制拟合结果为 LaTeX 公式。"""
+        QMessageBox.information(self, "待实现", "LaTeX 复制功能将在下一步实现。")
+
+    # ── Settings 标签页槽函数 ──────────────────────────
+
+    def _settings_reset(self) -> None:
+        """恢复设置默认值。"""
+        reply = QMessageBox.question(
+            self, "恢复默认",
+            "确定要恢复所有设置为默认值吗？",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self.radio_settings_lang_zh.setChecked(True)
+            self.edit_settings_name.clear()
+            self.edit_settings_student_id.clear()
+            self.spin_settings_font_size.setValue(10)
+            self.spin_settings_default_dpi.setValue(DPI_DEFAULT)
+            self.combo_settings_default_format.setCurrentIndex(0)
+
+    # ── 入口 ──────────────────────────────────────────────
 def main() -> None:
     """应用入口。"""
     app = QApplication(sys.argv)
